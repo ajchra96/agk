@@ -19,13 +19,14 @@ def render_resumen_tab(df, df_historico, df_completo, config, params, groups, df
 
         for equipo in sorted(latest_anomalies.keys()):
             anomalies = latest_anomalies[equipo]
+
             enriched_anomalies = enrich_anomalies_with_severity(anomalies, df_acciones)
-            
+
             st.markdown(f"**{equipo}**")
 
             # Group anomalies by their category
             by_group = {}
-            for anomaly in anomalies:
+            for anomaly in enriched_anomalies:
                 g = anomaly["grupo"]
                 by_group.setdefault(g, []).append(anomaly)
 
@@ -34,7 +35,9 @@ def render_resumen_tab(df, df_historico, df_completo, config, params, groups, df
                 violations = by_group.get(group, [])
                 if not violations:
                     continue
+
                 st.markdown(f"**Anomalías en {group} ({len(violations)}):**")
+
                 for v in violations:
                     st.markdown(f"{emoji_map.get(v.get('priority', 0), '🟢')} {v['mensaje']} ")
 
