@@ -13,20 +13,23 @@ st.title("Análisis de Motores")
 ####
 
 st.sidebar.header("Carga de archivos")
+
 uploaded_motores = st.sidebar.file_uploader(
-    "Datos de motores (hoja 'DATOS')",
+    "Archivo de datos de motores (motores_base.xlsx)",
     type=["xlsx", "xls"],
-    key="upload_motores"
+    help="Debe contener la hoja 'DATOS'"
 )
+
 uploaded_reglas = st.sidebar.file_uploader(
-    "Reglas (hoja 'REGLAS')",
+    "Archivo de reglas (Reglas.xlsx)",
     type=["xlsx", "xls"],
-    key="upload_reglas"
+    help="Debe contener la hoja 'REGLAS'"
 )
 
 ####
 
-df, df_historico, df_completo, config, params = motores_base()
+df, df_historico, df_completo, config, params = motores_base(uploaded_motores)
+df_acciones = acciones_base(uploaded_reglas)
 
 # === TABS ===
 tab_resumen, tab_especifico, tab_analisis = st.tabs(["General", "Específico", "Análisis"])
@@ -37,7 +40,7 @@ with tab_resumen:
 
 with tab_especifico:
 
-    render_especifico_tab(df, df_historico, df_completo, config, params)
+    render_especifico_tab(df, df_historico, df_completo, config, params, df_acciones)
 
 with tab_analisis:
 
