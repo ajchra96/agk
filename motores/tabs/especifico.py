@@ -2,11 +2,10 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-from data import acciones_base
 #from ai import render_ai_chat_esp
 
 @st.fragment
-def render_especifico_tab(df, df_historico, df_completo, config, params):
+def render_especifico_tab(df, df_historico, df_completo, config, params, df_acciones):
 
     st.header("Análisis de Condición Motores Diesel por Equipo")
 
@@ -56,7 +55,7 @@ def render_especifico_tab(df, df_historico, df_completo, config, params):
     # --- Resumen de Condición ---
     st.markdown("### Resumen de Condición de la Última Toma")
 
-    df_acciones = acciones_base()
+    #df_acciones = acciones_base()
 
     ## Último registro del equipo
     latest_row = df_filtered.sort_values(config.col_horometro).iloc[-1]
