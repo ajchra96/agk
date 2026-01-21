@@ -3,144 +3,96 @@ import pandas as pd
 import plotly.express as px
 
 #from ai import render_ai_chat_esp
+from data import get_latest_anomalies
+from data import get_worst_severity, enrich_anomalies_with_severity
 
 @st.fragment
-def render_especifico_tab(df, df_historico, df_completo, config, params, df_acciones):
-
+def render_especifico_tab(df, df_historico, df_completo, config, params, groups, df_acciones):
     st.header("Análisis de Condición Motores Diesel por Equipo")
 
-    # --- Filtro ---
+    # Get latest anomalies once (shared with resumen tab)
+    latest_anomalies = get_latest_anomalies(df, config, params)
 
-    def check_anomaly(row, params):
-        for name, col, min_val, max_val, group in params:
-            value = row.get(col)
-            if pd.isna(value):
-                continue
-            if min_val is not None and max_val is not None:
-                if value <= min_val or value > max_val:
-                    return True
-            elif min_val is not None:
-                if value <= min_val:
-                    return True
-            elif max_val is not None:
-                if value > max_val:
-                    return True
-        return False
+    # Prepare equipment list with severity-based emoji + sorting
+    equipo_data = []
+    all_equipos = sorted(df[config.col_equipos].dropna().unique())
 
-    # Obtener la fila más reciente por equipo (según horómetro)
-    latest_indices = df.groupby(config.col_equipos)[config.col_horometro].idxmax()
-    latest_df = df.loc[latest_indices]
+    emoji_map = {3: "🔴", 2: "🟠", 1: "🟡", 0: "🟢"}
 
-    # Aplicar el chequeo de anomalías
-    latest_df['has_anomaly'] = latest_df.apply(lambda row: check_anomaly(row, params), axis=1)
+    for eq in all_equipos:
+        anomalies = latest_anomalies.get(eq, [])
+        
+        # Get worst severity priority (0 = no issue / green)
+        worst_priority = get_worst_severity(anomalies, df_acciones)
 
-    # Diccionario equipo → tiene anomalía
-    anomaly_status = latest_df.set_index(config.col_equipos)['has_anomaly'].to_dict()
+        # Map priority → emoji
+        emoji = emoji_map.get(worst_priority, "🟢")
 
-    # Lista de equipos ordenada: 
-    equipo_options = sorted(anomaly_status.keys(), key=str.lower)
+        equipo_data.append((emoji, eq, worst_priority))
 
-    # Mostrar Filtro
-    selected_equipo = st.selectbox(
+    # Prepare selectbox data
+    display_labels = [f"{emoji} {eq}" for emoji, eq, _ in equipo_data]
+    real_equipos   = [eq for _, eq, _ in equipo_data]
+
+    # Selectbox – defaults to the most critical equipment
+    selected_idx = st.selectbox(
         label="Equipo",
-        options=equipo_options,
-        index=0,  # gracias al orden, selecciona automáticamente el primer equipo con anomalía si existe
-        format_func=lambda eq: f"{'🔴' if anomaly_status[eq] else '🟢'} {eq}",
-        key="filtro_equipos",
+        options=range(len(real_equipos)),
+        format_func=lambda i: display_labels[i],
+        index=0,  # first item = worst case
+        key="filtro_equipos_especifico"
     )
+    selected_equipo = real_equipos[selected_idx]
 
     df_filtered = df.copy()
     df_filtered = df_filtered[df_filtered[config.col_equipos] == selected_equipo]
 
-    # --- Resumen de Condición ---
+    # Get anomalies for this equipment
+    anomalies = latest_anomalies.get(selected_equipo, [])
+    enriched_anomalies = enrich_anomalies_with_severity(anomalies, df_acciones)
+
     st.markdown("### Resumen de Condición de la Última Toma")
 
-    #df_acciones = acciones_base()
-
-    ## Último registro del equipo
-    latest_row = df_filtered.sort_values(config.col_horometro).iloc[-1]
-
-    # Recolectar grupos en orden de aparición
-    groups_order = []
-    for _, _, _, _, group in params:
-        if group not in groups_order:
-            groups_order.append(group)
-
-    # Diccionario para agrupar anomalías
-    anomalies_by_group = {}
-
-    # Detección de anomalías (tu lógica actualizada)
-    for name, col, min_val, max_val, group in params:
-        value = latest_row.get(col)
-        if pd.isna(value):
-            continue
-        
-        tipo = None
-        limite_str = ""
-        
-        if min_val is not None and max_val is not None:
-            if value < min_val:
-                tipo = "BAJA"
-                limite_str = f"por debajo del mínimo ({min_val:.2f})"
-            elif value > max_val:
-                tipo = "ALTA"
-                limite_str = f"por encima del máximo ({max_val:.2f})"
-        elif min_val is not None:
-            if value < min_val:
-                tipo = "BAJA"
-                limite_str = f"por debajo del mínimo ({min_val:.2f})"
-        elif max_val is not None:
-            if value > max_val:
-                tipo = "ALTA"
-                limite_str = f"por encima del máximo ({max_val:.2f})"
-        
-        if tipo is not None:
-            titulo = f"{name}: {value:.2f} → {tipo.lower()} {limite_str}"
-            
-            if group not in anomalies_by_group:
-                anomalies_by_group[group] = []
-            
-            anomalies_by_group[group].append({
-                "titulo": titulo,
-                "parametro": col,
-                "tipo": tipo,
-                "valor": value,
-                "grupo": group
-            })
-
-    # Mostrar resultado
-    if anomalies_by_group:
+    if anomalies:
         st.error("⚠️ Anomalías detectadas:")
-        
-        for group in groups_order:
-            violations = anomalies_by_group.get(group, [])
+
+        # Group by category
+        by_group = {}
+        for anomaly in enriched_anomalies:
+            g = anomaly["grupo"]
+            by_group.setdefault(g, []).append(anomaly)
+
+        # Show groups in the original params order
+        for group in groups:
+            violations = by_group.get(group, [])
             if not violations:
                 continue
-            
-            # Título del grupo como subheader (sin expander)
+
             st.markdown(f"##### Anomalías en {group} ({len(violations)})")
-            
-            # Lista de anomalías, cada una con su propio expander
+
             for v in violations:
-                # Búsqueda del motivo/acción/severidad
+                # Lookup in acciones
                 match = df_acciones[
-                    (df_acciones["Indicador"] == v["parametro"]) &
+                    (df_acciones["Indicador"] == v["column"]) &
                     (df_acciones["Tipo"].str.upper() == v["tipo"])
                 ]
-                
+
                 if not match.empty:
                     row = match.iloc[0]
-                    posible_motivo = row.get("Posible Motivo", "No disponible")
+                    posible_motivo    = row.get("Posible Motivo", "No disponible")
                     accion_recomendada = row.get("Acción Recomendada", "No disponible")
-                    severidad_tipica = row.get("Severidad Típica", "No disponible")
+                    severidad_tipica   = row.get("Severidad Típica", "No disponible")
                 else:
-                    posible_motivo = "No se encontró motivo específico"
+                    posible_motivo    = "No se encontró motivo específico"
                     accion_recomendada = "No se encontró acción recomendada"
-                    severidad_tipica = "No disponible"
-                
-                # Cada anomalía individual es un expander
-                with st.expander(f"{v['titulo']}", expanded=False):
-                    st.markdown(f"**Valor medido:** {v['valor']:.2f}")
+                    severidad_tipica   = "No disponible"
+
+                # Expander per anomaly (keeping your original style)
+
+                emoji = emoji_map.get(v.get("priority", 0), "🟢")
+
+                with st.expander(f"{emoji} {v['mensaje']}", expanded=False):
+                    st.markdown(f"**Valor medido:** {v['value']:.2f}")
                     st.markdown("**Posible Motivo:**")
                     st.info(posible_motivo)
                     st.markdown("**Acción Recomendada:**")
@@ -149,7 +101,7 @@ def render_especifico_tab(df, df_historico, df_completo, config, params, df_acci
                     st.markdown(severidad_tipica)
 
     else:
-        st.success("✅ Todos los parámetros están dentro de los límites.")
+        st.success(f"✅ Todos los parámetros del equipo **{selected_equipo}** están dentro de los límites.")
 
     # --- Gráficas ---
 
