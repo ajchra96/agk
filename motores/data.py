@@ -3,7 +3,10 @@ import pandas as pd
 from types import SimpleNamespace
 
 
-def motores_base():
+def motores_base(uploaded_file):
+
+    if uploaded_file is None:
+        return None, None, None, None, None  # or raise error / show message in caller
 
     #---------Constantes-------------#
 
@@ -179,6 +182,10 @@ def motores_base():
 
     return df, df_historico, df_completo, config, params
 
-def acciones_base():
+def acciones_base(uploaded_rules_file):
+
+    if uploaded_rules_file is None:
+        return None   # only one return value
+        
     df_acc = pd.read_excel("Reglas.xlsx", sheet_name="REGLAS")
     return df_acc
