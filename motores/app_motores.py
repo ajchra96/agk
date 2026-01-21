@@ -13,7 +13,7 @@ st.title("Análisis de Motores")
 df, df_historico, df_completo, config, params = motores_base()
 
 # === TABS ===
-tab_resumen, tab_especifico, tab_analisis = st.tabs(["General", "Específico", "Análisis"])
+tab_resumen, tab_especifico, tab_analisis, tab_data = st.tabs(["General", "Específico", "Análisis", "Data"])
 
 with tab_resumen:
 
