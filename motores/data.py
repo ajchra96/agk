@@ -100,7 +100,7 @@ def motores_base(uploaded_file):
 
     ## Lectura
     
-    df = pd.read_excel("motores_base.xlsx", sheet_name="DATOS")
+    df = pd.read_excel(uploaded_file, sheet_name="DATOS")
 
     #---------Data Promedios-------------#
 
@@ -187,5 +187,5 @@ def acciones_base(uploaded_rules_file):
     if uploaded_rules_file is None:
         return None   # only one return value
         
-    df_acc = pd.read_excel("Reglas.xlsx", sheet_name="REGLAS")
+    df_acc = pd.read_excel(uploaded_rules_file, sheet_name="REGLAS")
     return df_acc
