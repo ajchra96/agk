@@ -2,12 +2,14 @@ import streamlit as st
 import pandas as pd
 
 #from ai import render_ai_chat
-from data import get_latest_anomalies
+from data import get_latest_anomalies, enrich_anomalies_with_severity
 
 @st.fragment
-def render_resumen_tab(df, df_historico, df_completo, config, params, groups):
+def render_resumen_tab(df, df_historico, df_completo, config, params, groups, df_acciones):
     st.header("Resumen General de Condición - Todos los Equipos")
     st.markdown("### Resumen de Anomalías (Última Toma)")
+
+    emoji_map = {3: "🔴", 2: "🔵", 1: "🟡", 0: "🟢"}
 
     latest_anomalies = get_latest_anomalies(df, config, params)
 
@@ -17,6 +19,8 @@ def render_resumen_tab(df, df_historico, df_completo, config, params, groups):
 
         for equipo in sorted(latest_anomalies.keys()):
             anomalies = latest_anomalies[equipo]
+            enriched_anomalies = enrich_anomalies_with_severity(anomalies, df_acciones)
+            
             st.markdown(f"**{equipo}**")
 
             # Group anomalies by their category
@@ -32,7 +36,7 @@ def render_resumen_tab(df, df_historico, df_completo, config, params, groups):
                     continue
                 st.markdown(f"**Anomalías en {group} ({len(violations)}):**")
                 for v in violations:
-                    st.markdown(f"- {v['mensaje']}")
+                    st.markdown(f"{emoji_map.get(v.get('priority', 0), '🟢')} {v['mensaje']} ")
 
             st.markdown("---")
 
