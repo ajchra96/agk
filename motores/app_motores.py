@@ -37,7 +37,7 @@ tab_resumen, tab_especifico, tab_analisis = st.tabs(["General", "Específico", "
 
 with tab_resumen:
 
-    render_resumen_tab(df, df_historico, df_completo, config, params, groups)
+    render_resumen_tab(df, df_historico, df_completo, config, params, groups, df_acciones)
 
 with tab_especifico:
 
