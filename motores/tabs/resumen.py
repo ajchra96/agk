@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-from ai import render_ai_chat
+#from ai import render_ai_chat
 
 @st.fragment
 def render_resumen_tab(df, df_historico, df_completo, config, params):
@@ -92,4 +92,4 @@ def render_resumen_tab(df, df_historico, df_completo, config, params):
 
     # --- AI Chat ---
 
-    render_ai_chat(df, config, params)
+    #render_ai_chat(df, config, params)
