@@ -9,7 +9,7 @@ def render_resumen_tab(df, df_historico, df_completo, config, params, groups, df
     st.header("Resumen General de Condición - Todos los Equipos")
     st.markdown("### Resumen de Anomalías (Última Toma)")
 
-    emoji_map = {3: "🔴", 2: "🔵", 1: "🟡", 0: "🟢"}
+    emoji_map = {3: "🔴", 2: "🟠", 1: "🟡", 0: "🟢"}
 
     latest_anomalies = get_latest_anomalies(df, config, params)
 
