@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 
 from data import motores_base
+from data import acciones_base
 from tabs.especifico import render_especifico_tab
 from tabs.resumen import render_resumen_tab
 from tabs.analisis import render_analisis_tab
