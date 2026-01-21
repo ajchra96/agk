@@ -17,7 +17,7 @@ def render_especifico_tab(df, df_historico, df_completo, config, params, groups,
     equipo_data = []
     all_equipos = sorted(df[config.col_equipos].dropna().unique())
 
-    emoji_map = {3: "🔴", 2: "🟠", 1: "🟡", 0: "🟢"}
+    emoji_map = {3: "🔴", 2: "🔵", 1: "🟡", 0: "🟢"}
 
     for eq in all_equipos:
         anomalies = latest_anomalies.get(eq, [])
