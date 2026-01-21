@@ -3,7 +3,6 @@ import pandas as pd
 from types import SimpleNamespace
 
 
-@st.cache_data(ttl=3600)
 def motores_base():
 
     #---------Constantes-------------#
@@ -180,7 +179,6 @@ def motores_base():
 
     return df, df_historico, df_completo, config, params
 
-@st.cache_data(ttl=3600)
 def acciones_base():
     df_acc = pd.read_excel("Reglas.xlsx", sheet_name="REGLAS")
     return df_acc
