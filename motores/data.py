@@ -3,7 +3,7 @@ import pandas as pd
 from types import SimpleNamespace
 
 def motores_base():
-    #---------File Upload-------------#
+    #---------File Upload-------------# 
     uploaded_file = st.file_uploader(
         "Sube el archivo de datos de motores (anteriormente 'motores_base.xlsx')",
         type=["xlsx", "xls"],
