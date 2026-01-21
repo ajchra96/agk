@@ -180,7 +180,9 @@ def motores_base(uploaded_file):
         ("PQ", config.col_pq, None, config.pq_max, "Condición del aceite"),
     ]
 
-    return df, df_historico, df_completo, config, params
+    groups = list(dict.fromkeys(param[4] for param in params))
+
+    return df, df_historico, df_completo, config, params, groups
 
 def acciones_base(uploaded_rules_file):
 
@@ -189,3 +191,128 @@ def acciones_base(uploaded_rules_file):
         
     df_acc = pd.read_excel(uploaded_rules_file, sheet_name="REGLAS")
     return df_acc
+
+#-------------------Helpers-------------------------------#
+
+@st.cache_data(ttl=3600)
+def detect_anomalies(row, params):
+    """
+    Detects all anomalies in a single row using the params configuration.
+    
+    Args:
+        row: pandas Series (one equipment measurement at a specific time)
+        params: list of tuples like [(name, column, min_val, max_val, group), ...]
+    
+    Returns:
+        List of anomaly dicts (empty if no violations)
+    """
+    anomalies = []
+    
+    for name, col, min_val, max_val, group in params:
+        value = row.get(col)
+        if pd.isna(value):
+            continue
+            
+        tipo = None
+        limite = None
+        mensaje = None
+        
+        if min_val is not None and max_val is not None:
+            if value < min_val:
+                tipo = "BAJA"
+                limite = min_val
+                mensaje = f"por debajo del mínimo ({min_val:.2f})"
+            elif value > max_val:
+                tipo = "ALTA"
+                limite = max_val
+                mensaje = f"por encima del máximo ({max_val:.2f})"
+                
+        elif min_val is not None:
+            if value < min_val:
+                tipo = "BAJA"
+                limite = min_val
+                mensaje = f"por debajo del mínimo ({min_val:.2f})"
+                
+        elif max_val is not None:
+            if value > max_val:
+                tipo = "ALTA"
+                limite = max_val
+                mensaje = f"por encima del máximo ({max_val:.2f})"
+        
+        if tipo is not None:
+            full_mensaje = f"{name}: {value:.2f} → {tipo.lower()} {mensaje}"
+            
+            anomalies.append({
+                "name": name,
+                "column": col,
+                "value": value,
+                "tipo": tipo,
+                "limite": limite,
+                "mensaje": full_mensaje,
+                "grupo": group
+            })
+    
+    return anomalies
+
+@st.cache_data(ttl=3600)
+def get_latest_anomalies(df, config, params):
+    """
+    Returns {equipo: [anomalies]} only for equipments that have at least one anomaly
+    """
+    latest_idx = df.groupby(config.col_equipos)[config.col_horometro].idxmax()
+    latest_df = df.loc[latest_idx]
+    
+    result = {}
+    for _, row in latest_df.iterrows():
+        equipo = row[config.col_equipos]
+        anomalies = detect_anomalies(row, params)
+        if anomalies:
+            result[equipo] = anomalies
+    return result
+
+@st.cache_data(ttl=3600)
+def enrich_anomalies_with_severity(anomalies, df_acciones):
+    """
+    Enriches each anomaly with 'severidad' and 'priority' keys.
+    Returns list of enriched dicts.
+    """
+    # Mapping lives here → function becomes self-contained
+    severity_priority = {
+        "Crítico":    3,
+        "Precaución": 2,
+        "Atención":   1,
+        # you can add more levels later without changing other code
+    }
+
+    enriched = []
+    for anomaly in anomalies:
+        match = df_acciones[
+            (df_acciones["Indicador"] == anomaly["column"]) &
+            (df_acciones["Tipo"].str.upper() == anomaly["tipo"])
+        ]
+        severidad = (
+            match.iloc[0].get("Severidad Típica", "No disponible")
+            if not match.empty
+            else "No disponible"
+        )
+
+        priority = severity_priority.get(severidad, 0)
+
+        enriched_anomaly = anomaly.copy()
+        enriched_anomaly["severidad"] = severidad
+        enriched_anomaly["priority"] = priority
+        enriched.append(enriched_anomaly)
+
+    return enriched
+
+@st.cache_data(ttl=3600)
+def get_worst_severity(anomalies, df_acciones):
+    if not anomalies:
+        return 0
+
+    enriched = enrich_anomalies_with_severity(anomalies, df_acciones)
+    if not enriched:
+        return 0
+
+    # Now we can just take max priority (already calculated)
+    return max(a["priority"] for a in enriched)
