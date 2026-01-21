@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.express as px
 
 from data import acciones_base
-from ai import render_ai_chat_esp
+#from ai import render_ai_chat_esp
 
 @st.fragment
 def render_especifico_tab(df, df_historico, df_completo, config, params):
@@ -1302,11 +1302,4 @@ def render_especifico_tab(df, df_historico, df_completo, config, params):
 
     df_filtered_ai = df_filtered.copy()
 
-    render_ai_chat_esp(
-        df_filtered=df_filtered_ai,
-        latest_row=latest_row,
-        config=config,
-        params=params,
-        anomalies_by_group=anomalies_by_group,
-        groups_order=groups_order
-    )
+    #render_ai_chat_esp(df_filtered=df_filtered_ai,latest_row=latest_row,config=config,params=params,anomalies_by_group=anomalies_by_group,groups_order=groups_order)
