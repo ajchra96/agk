@@ -91,7 +91,40 @@ def render_resumen_tab(df, df_historico, df_completo, config, params, groups, df
             )
             st.plotly_chart(fig, use_container_width=True)
 
-    
+    # ----- Top offenders -----
+    st.subheader("Resumen Equipos con problemas actuales")
+    offenders = latest_df[latest_df["max_priority"] > 0].copy()
+    if not offenders.empty:
+        def top_groups(enriched):
+            if not enriched:
+                return "-"
+            df_g = pd.DataFrame(enriched)
+            return ", ".join(df_g["grupo"].value_counts().head(2).index)
+
+        offenders["top_grupos"] = offenders["enriched_anomalies"].apply(top_groups)
+
+        display_cols = [
+            config.col_equipos,
+            "max_priority",
+            "anomaly_count",
+            "top_grupos",
+            config.col_horometro,
+            config.col_fecha
+        ]
+        offenders_display = offenders[display_cols].sort_values(
+            ["max_priority", "anomaly_count"], ascending=False
+        ).rename(columns={
+            config.col_equipos: "Equipo",
+            "max_priority": "Severidad máxima",
+            "anomaly_count": "Nº anomalías",
+            "top_grupos": "Grupos principales",
+            config.col_horometro: "Horómetro",
+            config.col_fecha: "Última fecha"
+        })
+        st.dataframe(offenders_display, use_container_width=True)
+    else:
+        st.success("¡No hay equipos con anomalías actuales!")
+        
     #-------------------Resumen especifico------------------------#
     
     st.markdown("### Resumen de Anomalías (Última Toma)")
