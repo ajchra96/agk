@@ -38,7 +38,10 @@ def render_resumen_tab(df, df_historico, df_completo, config, params, groups, df
             marker_colors=["green", "yellow", "orange", "red"],
             textinfo="label+percent"
     ))
-    fig_donut.update_layout(title="Estado actual de la flota")
+    fig_donut.update_layout(
+        title="Estado actual de la flota",
+        showlegend=False
+    )
     st.plotly_chart(fig_donut, use_container_width=True)
 
     # ----- Problemas más prevalentes actuales -----
