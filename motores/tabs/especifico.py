@@ -1,10 +1,10 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 
 #from ai import render_ai_chat_esp
-from data import get_latest_anomalies
-from data import get_worst_severity, enrich_anomalies_with_severity
+from data import get_latest_anomalies, get_worst_severity, enrich_anomalies_with_severity, compute_row_metrics
 
 @st.fragment
 def render_especifico_tab(df, df_historico, df_completo, config, params, groups, df_acciones):
@@ -102,6 +102,102 @@ def render_especifico_tab(df, df_historico, df_completo, config, params, groups,
 
     else:
         st.success(f"✅ Todos los parámetros del equipo **{selected_equipo}** están dentro de los límites.")
+
+    #---Evolución Equipo ----------#
+
+    st.markdown("### Evolución estado del equipo")
+
+    equip_df = df[df[config.col_equipos] == selected_equipo].sort_values(config.col_horometro).reset_index(drop=True)
+
+    metrics_eq = equip_df.apply(
+        lambda row: compute_row_metrics(row, params, df_acciones),
+        axis=1
+    )
+    equip_df["max_priority"] = [m[0] for m in metrics_eq]
+    equip_df["anomaly_count"] = [m[1] for m in metrics_eq]
+    equip_df["enriched"] = [m[2] for m in metrics_eq]
+
+    # Main severity chart (stepped line + markers)
+    colors = {0: "green", 1: "yellow", 2: "orange", 3: "red"}
+    fig_main = go.Figure()
+
+    # Stepped lines
+    for i in range(len(equip_df) - 1):
+        p = equip_df.iloc[i]["max_priority"]
+        fig_main.add_trace(go.Scatter(
+            x=[equip_df.iloc[i][config.col_horometro], equip_df.iloc[i+1][config.col_horometro]],
+            y=[p, p],
+            mode="lines",
+            line=dict(color=colors[p], width=6),
+            showlegend=False
+        ))
+
+    # Markers + labels
+    fig_main.add_trace(go.Scatter(
+        x=equip_df[config.col_horometro],
+        y=equip_df["max_priority"],
+        mode="markers+text",
+        marker=dict(color=[colors[p] for p in equip_df["max_priority"]], size=12),
+        text=[["Sano", "Atención", "Precaución", "Crítico"][p] for p in equip_df["max_priority"]],
+        textposition="top center",
+        showlegend=False
+    ))
+
+    fig_main.update_layout(
+        title=f"Evolución de severidad máxima – {selected_equipo}",
+        xaxis_title="Horómetro",
+        yaxis=dict(tickvals=[0,1,2,3], ticktext=["Sano", "Atención", "Precaución", "Crítico"]),
+        showlegend=False
+    )
+    st.plotly_chart(fig_main, use_container_width=True)
+
+    # Anomaly count line
+    fig_count = px.line(
+        equip_df,
+        x=config.col_horometro,
+        y="anomaly_count",
+        markers=True,
+        color_discrete_sequence=["steelblue"]
+    )
+    fig_count.update_traces(line=dict(width=3))
+    fig_count.update_layout(title="Número total de anomalías por muestra")
+    st.plotly_chart(fig_count, use_container_width=True)
+
+    # Stacked bars by group
+    stacked_data = []
+    for _, row in equip_df.iterrows():
+        enriched = row["enriched"]
+        if enriched:
+            df_g = pd.DataFrame(enriched)
+            counts = df_g["severidad"].value_counts()
+            for g, c in counts.items():
+                stacked_data.append({"horometro": row[config.col_horometro], "grupo": g, "count": c})
+
+    if stacked_data:
+        df_stacked = pd.DataFrame(stacked_data)
+
+        # Mapeo de colores consistente
+        color_map = {
+            "Crítico": "red",
+            "Precaución": "orange", 
+            "Atención": "yellow"
+        }
+        fig_stacked = px.bar(
+            df_stacked,
+            x="horometro",
+            y="count",
+            color="grupo",
+            title="Anomalías por nivel de severidad (stacked)",
+            barmode="stack",
+            color_discrete_map=color_map,
+            category_orders={"severidad": ["Crítico", "Precaución", "Atención"]}
+        )
+        fig_stacked.update_traces(
+            hovertemplate="Nivel: %{fullData.name}<br>Nº anomalías: %{y}<br>Horómetro: %{x}<extra></extra>"
+        )
+        fig_stacked.update_layout(showlegend=False)
+        
+        st.plotly_chart(fig_stacked, use_container_width=True)
 
     # --- Gráficas ---
 
