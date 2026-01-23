@@ -42,6 +42,7 @@ def render_resumen_tab(df, df_historico, df_completo, config, params, groups, df
         title="Estado actual de la flota",
         showlegend=False
     )
+    
     st.plotly_chart(fig_donut, use_container_width=True)
 
     # ----- Problemas más prevalentes actuales -----
