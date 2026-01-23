@@ -174,7 +174,8 @@ def render_analisis_tab(df, df_historico, df_completo, config, params, groups, d
     fig_trend_pct.update_layout(
         title="% de la flota por nivel de severidad (mensual)",
         yaxis_title="% de equipos",
-        yaxis_range=[0, 100]
+        yaxis_range=[0, 100],
+        hovermode="x unified"
     )
     st.plotly_chart(fig_trend_pct, use_container_width=True)
 
@@ -193,7 +194,8 @@ def render_analisis_tab(df, df_historico, df_completo, config, params, groups, d
     fig_group_trend.update_layout(
         title="% de anomalías por grupo (mensual)",
         yaxis_title="% del total de anomalías",
-        yaxis_range=[0, 100]
+        yaxis_range=[0, 100],
+        hovermode="x unified"
     )
     st.plotly_chart(fig_group_trend, use_container_width=True)
 
