@@ -5,6 +5,8 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import numpy as np
 
+from data import get_worst_severity, enrich_anomalies_with_severity, compute_row_metrics, detect_anomalies
+
 def render_analisis_tab(df, df_historico, df_completo, config, params):
     st.header("Análisis Avanzado")
 
