@@ -45,4 +45,4 @@ with tab_especifico:
 
 with tab_analisis:
 
-    render_analisis_tab(df, df_historico, df_completo, config, params)
+    render_analisis_tab(df, df_historico, df_completo, config, params, groups, df_acciones)
