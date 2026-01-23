@@ -316,3 +316,10 @@ def get_worst_severity(anomalies, df_acciones):
 
     # Now we can just take max priority (already calculated)
     return max(a["priority"] for a in enriched)
+
+def compute_row_metrics(row, params, df_acc):
+    anomalies = detect_anomalies(row, params)
+    enriched = enrich_anomalies_with_severity(anomalies, df_acc)
+    max_priority = max((a["priority"] for a in enriched), default=0)
+    anomaly_count = len(enriched)
+    return max_priority, anomaly_count, enriched
