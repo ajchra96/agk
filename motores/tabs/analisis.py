@@ -7,7 +7,7 @@ import numpy as np
 
 from data import get_worst_severity, enrich_anomalies_with_severity, compute_row_metrics, detect_anomalies
 
-def render_analisis_tab(df, df_historico, df_completo, config, params):
+def render_analisis_tab(df, df_historico, df_completo, config, params, groups, df_acciones):
     st.header("Análisis Avanzado")
 
     #----------------- Tendencias históricas--------------#
