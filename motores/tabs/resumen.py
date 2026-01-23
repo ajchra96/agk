@@ -27,7 +27,7 @@ def render_resumen_tab(df, df_historico, df_completo, config, params, groups, df
     healthy_percent = (latest_df["max_priority"] == 0).sum() / fleet_size * 100 if fleet_size > 0 else 0
 
     st.subheader("Vista General de la Flota")
-
+    
     col11, col12 = st.columns([1,1])
     
     with col11:
