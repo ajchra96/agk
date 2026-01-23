@@ -28,12 +28,7 @@ def render_resumen_tab(df, df_historico, df_completo, config, params, groups, df
 
     st.subheader("Vista General de la Flota")
     
-    col11, col12 = st.columns([1,1])
-    
-    with col11:
-        st.metric(label="Total equipos activos", value=fleet_size)
-    with col12:
-        st.metric(label="Flota en buen estado (sin anomalías)", value=f"{healthy_percent:.1f}%")
+    st.metric(label="Total equipos activos", value=fleet_size)
 
     severity_counts = latest_df["max_priority"].value_counts().reindex([0, 1, 2, 3], fill_value=0)
     fig_donut = go.Figure(go.Pie(
