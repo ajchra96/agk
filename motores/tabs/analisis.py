@@ -5,6 +5,8 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import numpy as np
 
+import scipy
+
 from data import get_worst_severity, enrich_anomalies_with_severity, compute_row_metrics, detect_anomalies
 
 def render_analisis_tab(df, df_historico, df_completo, config, params, groups, df_acciones):
@@ -238,117 +240,356 @@ def render_analisis_tab(df, df_historico, df_completo, config, params, groups, d
             )
             st.plotly_chart(fig, use_container_width=True)
 
-    # === 1. Heatmap de correlaciones ===
-    st.subheader("Matriz de Correlaciones")
-    st.markdown("""
-    Muestra las correlaciones (Pearson) entre todos los parámetros numéricos.  
-    Valores cercanos a ±1 indican relaciones fuertes.
-    """)
+    # ────────────────────────────────────────────────────────────────
+    # 2. General Analysis: ¿Qué impulsa los patrones actuales?
+    # ────────────────────────────────────────────────────────────────
+    st.subheader("Análisis General: ¿Qué impulsa los patrones actuales?")
 
-    # Columnas numéricas relevantes (excluye Horometro y Fecha si quieres)
-    numeric_cols = df.select_dtypes(include=['float64', 'int64']).columns.tolist()
-    # Opcional: filtrar solo las columnas de interés para que no sea demasiado grande
-    key_params = ["Viscosidad", "▲ Temp Radiador", "Fe", "Cr", "Pb", "Cu", "Sn", "Al",
-                  "Silicio", "Na", "Hollin", "Oxidación", "Sulfatación", "Nitración",
-                  "TBN", "P", "Zn", "Blow by Carter"]  # ajusta según tus columnas reales
-    corr_cols = [col for col in key_params if col in numeric_cols]
+    severity_to_priority = {"Crítico": 3, "Precaución": 2, "Atención": 1}
+    emoji_map = {3: "🔴", 2: "🟠", 1: "🟡", 0: "🟢"}
+    indicator_emoji = {}
+    for p in params:
+        col = p[1]
+        name = p[0]
+        match = df_acciones[df_acciones["Indicador"] == col]
+        priority = 0
+        if not match.empty:
+            sev = match.iloc[0].get("Severidad Típica", "")
+            priority = severity_to_priority.get(sev, 0)
+        indicator_emoji[name] = emoji_map[priority]
 
+    # Parameter Evolution (Horometer-Based)
+    st.markdown("**Evolución de Parámetros vs Horómetro**")
+    parametro = st.selectbox(
+        "Selecciona un parámetro",
+        options=[p[0] for p in params],
+        format_func=lambda name: f"{indicator_emoji.get(name, '')} {name}",
+        key="hor_param"
+    )
+    
+    # Find limits from params
+    selected_param = next((p for p in params if p[0] == parametro), None)
+    min_val, max_val = selected_param[2], selected_param[3] if selected_param else (None, None)
+    col_name = selected_param[1] if selected_param else parametro
+
+    fig_hor = px.scatter(
+        df,
+        x=config.col_horometro,
+        y=col_name,
+        color=config.col_equipos,
+        trendline="ols",
+        trendline_scope="overall",
+        title=f"{parametro} vs Horómetro (tendencia de flota)"
+    )
+    if min_val is not None:
+        fig_hor.add_hline(y=min_val, line_color="orange", line_dash="dash", annotation_text="Mínimo")
+    if max_val is not None:
+        fig_hor.add_hline(y=max_val, line_color="red", line_dash="dash", annotation_text="Máximo")
+    
+    if parametro in df_historico.columns:
+        hist_mean = df_historico[parametro].mean()
+        hist_sd = df_historico[parametro].std()
+        fig_hor.add_hline(y=hist_mean, line_color="black", line_dash="dash", annotation_text="Media histórica")
+        fig_hor.add_hrect(
+            y0=hist_mean - hist_sd,
+            y1=hist_mean + hist_sd,
+            fillcolor="gray",
+            opacity=0.2,
+            line_width=0,
+            annotation_text="±1 SD histórico"
+        )
+    
+    st.plotly_chart(fig_hor, use_container_width=True)
+
+    # Time-Based Graph (Fecha-Based)
+    st.markdown("**Evolución de Parámetros vs Fecha**")
+    df[config.col_fecha] = pd.to_datetime(df[config.col_fecha], errors='coerce')
+    df_plot = df[[config.col_fecha, col_name, config.col_equipos]].dropna(subset=[config.col_fecha, col_name])
+    fig_time = px.scatter(
+        df_plot,
+        x=config.col_fecha,
+        y=col_name,
+        color=config.col_equipos,
+        trendline="ols",
+        trendline_scope="overall",
+        title=f"{parametro} vs Fecha (tendencia de flota)"
+    )
+    if min_val is not None:
+        fig_time.add_hline(y=min_val, line_color="orange", line_dash="dash", annotation_text="Mínimo")
+    if max_val is not None:
+        fig_time.add_hline(y=max_val, line_color="red", line_dash="dash", annotation_text="Máximo")
+    
+    if parametro in df_historico.columns:
+        fig_time.add_hline(y=hist_mean, line_color="black", line_dash="dash", annotation_text="Media histórica")
+        fig_time.add_hrect(
+            y0=hist_mean - hist_sd,
+            y1=hist_mean + hist_sd,
+            fillcolor="gray",
+            opacity=0.2,
+            line_width=0,
+            annotation_text="±1 SD histórico"
+        )
+    
+    st.plotly_chart(fig_time, use_container_width=True)
+
+    # Strong Parameter Relationships
+    st.markdown("**Relaciones Fuertes entre Parámetros**")
+    corr_cols = [p[1] for p in params if p[1] in df.select_dtypes(include=['float64', 'int64']).columns]
     corr_matrix = df[corr_cols].corr().round(3)
 
-    fig_heatmap = px.imshow(
-        corr_matrix,
-        text_auto=True,
-        aspect="auto",
-        color_continuous_scale="RdBu_r",
-        zmin=-1, zmax=1,
-        title="Correlación entre parámetros clave"
+    anchor_param = st.selectbox(
+        "Selecciona un parámetro para analizar correlaciones",
+        options=[p[0] for p in params],
+        format_func=lambda name: f"{indicator_emoji.get(name, '')} {name}",
+        key="corr_anchor"
     )
-    fig_heatmap.update_layout(height=700)
-    st.plotly_chart(fig_heatmap, use_container_width=True)
+    threshold = st.number_input("Umbral de correlación absoluta (recomendado ≥0.7)", min_value=0.0, max_value=1.0, value=0.7, step=0.05, key="corr_thresh")
 
-    # === 2. Tendencias con regresión ===
-    st.subheader("Tendencias vs Horómetro con Regresión")
-    col1, col2 = st.columns(2)
-    with col1:
-        parametro = st.selectbox("Parámetro", corr_cols)
-    with col2:
-        modo = st.radio("Modo de visualización", ["Todos los equipos", "Por equipo separado"])
+    if anchor_param:
+        anchor_col = next(p[1] for p in params if p[0] == anchor_param)
+        correlates = corr_matrix[anchor_col].abs() > threshold
+        correlated_df = corr_matrix.loc[correlates, anchor_col].drop(anchor_col, errors='ignore').sort_values(ascending=False)
+        if not correlated_df.empty:
+            st.write("Correlaciones fuertes:")
+            for other_col, corr_val in correlated_df.items():
+                other_name = next((p[0] for p in params if p[1] == other_col), other_col)
+                sign = "suben juntos" if corr_val > 0 else "uno sube cuando el otro baja"
+                st.write(f"- {indicator_emoji.get(other_name, '')} {other_name}: {corr_val:.2f} ({sign})")
+        else:
+            st.write("No hay correlaciones por encima del umbral seleccionado.")
 
-    if modo == "Todos los equipos":
-        fig_trend = px.scatter(
-            df,
-            x="Horometro",
-            y=parametro,
-            color="Equipo",
-            trendline="ols",          # regresión lineal
-            trendline_scope="overall",# línea global
-            title=f"{parametro} vs Horómetro (tendencia global)"
-        )
+    # Anomaly Propagation Map (Limited to selected indicator)
+    st.markdown("**Mapa de Propagación de Anomalías**")
+    import networkx as nx
+
+    if anchor_param:
+        G = nx.Graph()
+        anchor_col = next(p[1] for p in params if p[0] == anchor_param)
+        for other_col in corr_cols:
+            if other_col == anchor_col: continue
+            corr = corr_matrix[anchor_col][other_col]
+            if abs(corr) > threshold:
+                other_name = next((p[0] for p in params if p[1] == other_col), other_col)
+                G.add_edge(anchor_param, other_name, weight=abs(corr))
+
+        if len(G.edges()) > 0:
+            pos = nx.spring_layout(G)
+            edge_x, edge_y = [], []
+            for edge in G.edges():
+                x0, y0 = pos[edge[0]]
+                x1, y1 = pos[edge[1]]
+                edge_x += [x0, x1, None]
+                edge_y += [y0, y1, None]
+
+            fig_map = go.Figure()
+            fig_map.add_trace(go.Scatter(
+                x=edge_x, y=edge_y,
+                mode='lines',
+                line=dict(width=2, color='gray'),
+                hoverinfo='none'
+            ))
+            for node in G.nodes():
+                x, y = pos[node]
+                fig_map.add_trace(go.Scatter(
+                    x=[x], y=[y],
+                    mode='markers+text',
+                    text=node,
+                    textposition="top center",
+                    marker=dict(size=20, color='blue')
+                ))
+            fig_map.update_layout(
+                title=f"Mapa de Propagación para {anchor_param} (correlaciones > umbral)",
+                showlegend=False,
+                hovermode='closest',
+                xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                yaxis=dict(showgrid=False, zeroline=False, showticklabels=False)
+            )
+            st.plotly_chart(fig_map, use_container_width=True)
+        else:
+            st.info(f"No hay propagación fuerte para {anchor_param}.")
     else:
-        fig_trend = px.scatter(
-            df,
-            x="Horometro",
-            y=parametro,
-            color="Equipo",
-            trendline="ols",
-            trendline_scope="trace",  # una línea por equipo
-            title=f"{parametro} vs Horómetro (tendencia por equipo)"
-        )
+        st.info("Selecciona un parámetro para ver el mapa de propagación.")
 
-    # Añadir línea del promedio histórico
-    if parametro in df_historico.columns:
-        fig_trend.add_scatter(
-            x=df_historico["Horometro"],
-            y=df_historico[parametro],
-            mode="lines",
-            name="Promedio histórico",
-            line=dict(dash="dash", color="black", width=3)
-        )
+    # ────────────────────────────────────────────────────────────────
+    # 3. Predictive Insights: ¿Qué podría pasar después?
+    # ────────────────────────────────────────────────────────────────
+    st.subheader("Perspectivas Predictivas: ¿Qué podría pasar después?")
 
-    st.plotly_chart(fig_trend, use_container_width=True)
+    # User input for N
+    N = st.number_input(
+        "Número de últimas tomas para proyecciones (default 5, min 3)",
+        min_value=3,
+        max_value=10,
+        value=5,
+        step=1,
+        key="proj_n"
+    )
 
-    # === 3. Tasa de desgaste (solo para metales de desgaste) ===
-    st.subheader("Tasa de Desgaste (ppm por 1000 horas)")
-    wear_metals = ["Fe", "Cr", "Pb", "Cu", "Al"]  # ajusta según tus datos
-    wear_metals = [m for m in wear_metals if m in df.columns]
+    # Healthy Subset Warning (Expanded to <3)
+    st.markdown("**Advertencia para Equipos No Críticos**")
+    non_critical_df = latest_df[latest_df["max_priority"] < 3]
+    non_critical_pct = len(non_critical_df) / fleet_size * 100 if fleet_size > 0 else 0
+    
+    critical_params = [
+        p for p in params 
+        if df_acciones[(df_acciones["Indicador"] == p[1]) & (df_acciones["Severidad Típica"] == "Crítico")].shape[0] > 0
+    ]
+    
+    at_risk_count = 0
+    for _, row in non_critical_df.iterrows():
+        eq = row[config.col_equipos]
+        eq_hist = df[df[config.col_equipos] == eq].sort_values(config.col_horometro).tail(N)
+        if len(eq_hist) < 3: continue
+        
+        for p in critical_params:
+            col = p[1]
+            val = row.get(col)
+            if pd.isna(val): continue
+            limit = p[3] if p[3] else p[2]
+            is_min = p[3] is None
+            valid_last = eq_hist[[config.col_horometro, col]].dropna()
+            if len(valid_last) < 3: continue
+            x = valid_last[config.col_horometro]
+            y = valid_last[col]
+            slope, intercept, r_value, _, _ = scipy.stats.linregress(x, y)
+            if abs(slope) < 1e-6: continue
+            if (is_min and slope > 0) or (not is_min and slope < 0): continue
+            ttl = (limit - val) / slope if not is_min else (val - limit) / -slope
+            if 0 < ttl < 10000:
+                at_risk_count += 1
+                break
+    
+    at_risk_pct = (at_risk_count / len(non_critical_df) * 100) if len(non_critical_df) > 0 else 0
+    st.info(f"De los {non_critical_pct:.0f}% equipos no críticos (incluye atención/precaución), ≈{at_risk_pct:.0f}% podrían escalar a crítico en <10,000h (basado en últimas {N} tomas).")
 
-    if wear_metals:
-        rates = []
-        for equipo in df["Equipo"].unique():
-            df_eq = df[df["Equipo"] == equipo].sort_values("Horometro")
-            if len(df_eq) < 2:
-                continue
-            for metal in wear_metals:
-                # Regresión simple: pendiente * 1000 para tasa por 1000 h
-                slope = np.polyfit(df_eq["Horometro"], df_eq[metal], 1)[0] * 1000
-                rates.append({
-                    "Equipo": equipo,
-                    "Metal": metal,
-                    "Tasa (ppm/1000 h)": round(slope, 2)
-                })
-        df_rates = pd.DataFrame(rates)
-        if not df_rates.empty:
-            st.dataframe(df_rates.pivot(index="Equipo", columns="Metal", values="Tasa (ppm/1000 h)").round(2))
+    # Pre-compute risks with consistent logic
+    risks = []
+    risk_details = {}  # Store per-eq ttl list for details
+    for _, row in latest_df.iterrows():
+        eq = row[config.col_equipos]
+        anoms = detect_anomalies(row, params)
+        enriched = enrich_anomalies_with_severity(anoms, df_acciones)
+        if any(a["priority"] == 3 for a in enriched): continue  # Skip if already critical
 
-    # === 4. Opcional: PCA rápido (avanzado pero útil) ===
-    if st.checkbox("Mostrar Análisis de Componentes Principales (PCA)"):
-        from sklearn.preprocessing import StandardScaler
-        from sklearn.decomposition import PCA
+        eq_hist = df[df[config.col_equipos] == eq].sort_values(config.col_horometro)
+        if len(eq_hist) < 3: continue
 
-        X = df[corr_cols].dropna()
-        X_scaled = StandardScaler().fit_transform(X)
-        pca = PCA(n_components=3)
-        components = pca.fit_transform(X_scaled)
+        eq_hist_last = eq_hist.tail(N)
+        if len(eq_hist_last) < 3: 
+            eq_hist_last = eq_hist  # Fallback to all
 
-        fig_pca = px.scatter_3d(
-            x=components[:,0],
-            y=components[:,1],
-            z=components[:,2],
-            color=df.loc[X.index, "Equipo"],
-            size=df.loc[X.index, "Fe"],  # ejemplo: tamaño por Fe
-            hover_data={"Horometro": df.loc[X.index, "Horometro"]},
-            title="PCA – 3 componentes principales"
-        )
-        st.plotly_chart(fig_pca, use_container_width=True)
+        eq_ttl = []
+        for p in critical_params:
+            col = p[1]
+            if col not in eq_hist_last.columns: continue
+            val = row.get(col)
+            if pd.isna(val): continue
+            limit = p[3] if p[3] is not None else p[2]
+            is_min = p[3] is None
+            valid_last = eq_hist_last[[config.col_horometro, col]].dropna()
+            if len(valid_last) < 3: continue
+            x = valid_last[config.col_horometro]
+            y = valid_last[col]
+            slope, intercept, r_value, _, _ = scipy.stats.linregress(x, y)
+            if abs(slope) < 1e-6: continue
+            if (is_min and slope > 0) or (not is_min and slope < 0): continue
+            ttl = (limit - val) / slope if not is_min else (val - limit) / -slope
+            if ttl <= 0 or ttl > 10000: continue
+            r2 = r_value ** 2
+            if r2 < 0.3: continue  # Skip low confidence fits
+            eq_ttl.append((p[0], ttl, col, slope, intercept, r2, valid_last))
 
-        st.write("Varianza explicada:", pca.explained_variance_ratio_.round(3))
+        if eq_ttl:
+            min_ttl = min([t[1] for t in eq_ttl])
+            min_ind = ", ".join([t[0] for t in eq_ttl if t[1] == min_ttl])
+            ind_at_risk = ", ".join([t[0] for t in eq_ttl])
+            risks.append({
+                "Equipo": eq,
+                "Horas proyectadas a volverse critico": round(min_ttl, 0),
+                "Indicador Causante": min_ind,
+                "Indicadores en Riesgo": ind_at_risk
+            })
+            risk_details[eq] = eq_ttl  # Store for details consistency
+
+    if risks:
+        risk_df = pd.DataFrame(risks).sort_values("Horas proyectadas a volverse critico")
+        st.warning(f"¡Revisa estos equipos ahora! Podrían alcanzar límites críticos pronto (top 10 mostrados, basado en últimas {N} tomas):")
+        st.dataframe(risk_df.head(10))
+
+        selected_eq = st.selectbox("Selecciona un equipo para ver detalles predictivos", risk_df["Equipo"], key="eq_risk_select")
+        if selected_eq:
+            eq_hist = df[df[config.col_equipos] == selected_eq].sort_values(config.col_horometro)
+            row = latest_df[latest_df[config.col_equipos] == selected_eq].iloc[0]
+            
+            eq_ttl_sorted = sorted(risk_details.get(selected_eq, []), key=lambda x: x[1])  # Use pre-computed, sorted by ttl
+            
+            st.subheader(f"Proyecciones para {selected_eq}")
+            for ind, ttl, col, slope, intercept, r2, valid_last in eq_ttl_sorted:
+                conf_note = f" (confianza: {round(r2, 2)} R²)" if r2 < 0.5 else ""
+                st.write(f"**{ind}**: ~{round(ttl)} horas a límite (asumiendo tendencia lineal; pendiente: {round(slope * 1000, 2)} por 1000h{conf_note}).")
+                
+                fig_mini = go.Figure()
+                
+                # Full history gray
+                fig_mini.add_trace(go.Scatter(
+                    x=eq_hist[config.col_horometro],
+                    y=eq_hist[col],
+                    mode='markers',
+                    marker=dict(color='gray', opacity=0.5),
+                    name='Historia completa'
+                ))
+                
+                # Last N blue
+                fig_mini.add_trace(go.Scatter(
+                    x=valid_last[config.col_horometro],
+                    y=valid_last[col],
+                    mode='markers',
+                    marker=dict(color='blue'),
+                    name=f'Últimas {len(valid_last)} tomas'
+                ))
+                
+                # Reg line on last N
+                reg_x = np.linspace(valid_last[config.col_horometro].min(), valid_last[config.col_horometro].max(), 100)
+                reg_y = slope * reg_x + intercept
+                fig_mini.add_trace(go.Scatter(
+                    x=reg_x,
+                    y=reg_y,
+                    mode='lines',
+                    line=dict(color='blue'),
+                    name='Tendencia reciente'
+                ))
+                
+                limit_val = next((p[3] if p[3] else p[2] for p in params if p[1] == col), None)
+                if limit_val is not None:
+                    fig_mini.add_hline(y=limit_val, line_color="red", line_dash="dash", annotation_text="Límite")
+                
+                # Projected dashed from end
+                last_h = eq_hist[config.col_horometro].max()
+                proj_x = [last_h, last_h + ttl]
+                proj_y = [row[col], limit_val]
+                fig_mini.add_trace(go.Scatter(
+                    x=proj_x,
+                    y=proj_y,
+                    mode='lines',
+                    line=dict(dash='dash', color='red'),
+                    name='Proyección'
+                ))
+                
+                fig_mini.update_layout(title=f"{ind} - {selected_eq}")
+                st.plotly_chart(fig_mini, use_container_width=True)
+                
+                # Recommendation with shoot-up explanation
+                correlates = []
+                for other_col in corr_cols:
+                    if other_col != col and abs(corr_matrix[col][other_col]) > 0.7:
+                        correlates.append(next((p2[0] for p2 in params if p2[1] == other_col), other_col))
+                
+                if abs(slope) > 0.01:  # Adjust threshold based on param scales
+                    st.warning(f"Nota: Pendiente pronunciada detectada—posible influencia de factores correlacionados o ruido reciente. Verifica datos históricos.")
+                
+                if correlates:
+                    st.info(f"Recomendación: {ind} correlaciona fuertemente con {', '.join(correlates)}. Considera revisar contaminación/desgaste y avanzar mantenimiento preventivo para evitar aceleración.")
+                else:
+                    st.info(f"Recomendación: Avanza mantenimiento para evitar que {ind} alcance el límite.")
+    else:
+        st.success("No hay equipos con proyecciones urgentes de alcanzar límites críticos en los indicadores prioritarios.")
