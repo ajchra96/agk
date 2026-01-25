@@ -151,18 +151,6 @@ def render_especifico_tab(df, df_historico, df_completo, config, params, groups,
     )
     st.plotly_chart(fig_main, use_container_width=True)
 
-    # Anomaly count line
-    fig_count = px.line(
-        equip_df,
-        x=config.col_horometro,
-        y="anomaly_count",
-        markers=True,
-        color_discrete_sequence=["steelblue"]
-    )
-    fig_count.update_traces(line=dict(width=3))
-    fig_count.update_layout(title="Número total de anomalías por muestra")
-    st.plotly_chart(fig_count, use_container_width=True)
-
     # Stacked bars by group
     stacked_data = []
     for _, row in equip_df.iterrows():
