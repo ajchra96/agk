@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 from types import SimpleNamespace
-from types import SimpleNamespace
 import plotly.express as px
 
 
@@ -340,9 +339,20 @@ SEVERITY_PRIORITY_ORDER_ASC  = [0, 1, 2, 3]
 #    Cargar Base de Datos
 # ----------------------------
 
-df, df_historico, df_completo, config = motores_base(uploaded_motores)
+df = None
+df_historico = None
+df_completo = None
+config = None
+df_acciones = None
 
-df_acciones = acciones_base(uploaded_reglas)
+def load_data(uploaded_motores, uploaded_reglas):
+    global df, df_historico, df_completo, config, df_acciones
+    
+    if uploaded_motores is None or uploaded_reglas is None:
+        return  # o raise error, según prefieras
+    
+    df, df_historico, df_completo, config = motores_base(uploaded_motores)
+    df_acciones = acciones_base(uploaded_reglas)
 
 # ----------------------------
 #    Parametros base motores
