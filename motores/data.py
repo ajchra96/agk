@@ -337,9 +337,9 @@ SEVERITY_PRIORITY_ORDER_ASC  = [0, 1, 2, 3]
 #    Cargar Base de Datos
 # ----------------------------
 
-df, df_historico, df_completo, config = motores_base()
+df, df_historico, df_completo, config = motores_base(uploaded_motores)
 
-df_acciones = acciones_base()
+df_acciones = acciones_base(uploaded_reglas)
 
 # ----------------------------
 #    Parametros base motores
