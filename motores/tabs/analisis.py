@@ -63,7 +63,18 @@ def render_analisis_tab():
 @st.fragment
 def historical_trends_fragment():
     
+
+    #VARIABLES
+    
+    config = data.config
+    df = data.df.copy()
+    df_historico = data.df_historico.copy()
+    df_completo = data.df_completo.copy()
+    df_acciones = data.df_acciones.copy()
     latest_df = data.latest_df.copy()
+    latest_anomalies = data.latest_anomalies
+    PARAMS = data.PARAMS 
+    PARAM_GROUPS = data.PARAM_GROUPS
     
     st.subheader("📈 Tendencias históricas")
     ## Calculos internos
@@ -262,6 +273,23 @@ def historical_trends_fragment():
 @st.fragment
 def parameter_evolution_fragment():
     st.subheader("Análisis General: ¿Qué impulsa los patrones actuales?")
+
+
+    
+    #VARIABLES
+    
+    config = data.config
+    df = data.df.copy()
+    df_historico = data.df_historico.copy()
+    df_completo = data.df_completo.copy()
+    df_acciones = data.df_acciones.copy()
+    latest_df = data.latest_df.copy()
+    latest_anomalies = data.latest_anomalies
+    PARAMS = data.PARAMS 
+    PARAM_GROUPS = data.PARAM_GROUPS
+
+
+    
     indicator_emoji = st.session_state.indicator_emoji
     ### Filtro
     parametro = st.selectbox(
@@ -339,6 +367,21 @@ def parameter_evolution_fragment():
 @st.fragment
 def correlations_fragment():
     st.markdown("**Relaciones Fuertes entre Parámetros**")
+
+    
+    #VARIABLES
+    
+    config = data.config
+    df = data.df.copy()
+    df_historico = data.df_historico.copy()
+    df_completo = data.df_completo.copy()
+    df_acciones = data.df_acciones.copy()
+    latest_df = data.latest_df.copy()
+    latest_anomalies = data.latest_anomalies
+    PARAMS = data.PARAMS 
+    PARAM_GROUPS = data.PARAM_GROUPS
+
+    
     corr_cols = st.session_state.corr_cols
     corr_matrix = st.session_state.corr_matrix
     indicator_emoji = st.session_state.indicator_emoji
@@ -414,6 +457,21 @@ def correlations_fragment():
 
 @st.fragment
 def predictive_fragment():
+
+    
+    #VARIABLES
+    
+    config = data.config
+    df = data.df.copy()
+    df_historico = data.df_historico.copy()
+    df_completo = data.df_completo.copy()
+    df_acciones = data.df_acciones.copy()
+    latest_df = data.latest_df.copy()
+    latest_anomalies = data.latest_anomalies
+    PARAMS = data.PARAMS 
+    PARAM_GROUPS = data.PARAM_GROUPS
+
+    
     st.subheader("Perspectivas Predictivas: ¿Qué podría pasar después?")
     fleet_size = len(latest_df)  # Duplicated here (fast, keeps original behavior)
     corr_matrix = st.session_state.corr_matrix
