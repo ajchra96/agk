@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-from ai import render_ai_chat_esp
+#from ai import render_ai_chat_esp
 from data import create_indicator_chart, get_worst_severity, enrich_anomalies_with_severity, compute_row_metrics, style_row
 from data import latest_anomalies
 from data import SEVERITY, SEVERITY_PRIORITY_ORDER_ASC, PARAMS, PARAM_GROUPS
