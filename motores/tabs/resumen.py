@@ -11,16 +11,15 @@ from data import SEVERITY, SEVERITY_PRIORITY_ORDER_DESC, PARAM_GROUPS
 def render_resumen_tab():
 
     #VARIABLES
-    
     config = data.config
-    df = data.df
-    df_historico = data.df_historico  # si lo usas
-    df_completo = data.df_completo    # si lo usas
-    df_acciones = data.df_acciones
-    latest_df = data.latest_df
+    df = data.df.copy()
+    df_historico = data.df_historico.copy()
+    df_completo = data.df_completo.copy()
+    df_acciones = data.df_acciones.copy()
+    latest_df = data.latest_df.copy()
     latest_anomalies = data.latest_anomalies
-    PARAMS = data.PARAMS              # si lo necesitas
-    PARAM_GROUPS = data.PARAM_GROUPS  # ya lo tenías importado directo, pero ok
+    PARAMS = data.PARAMS 
+    PARAM_GROUPS = data.PARAM_GROUPS
 
 
     st.header("Resumen General de Condición - Todos los Equipos")
