@@ -1,4 +1,5 @@
 import streamlit as st
+import data
 
 from tabs.especifico import render_especifico_tab
 from tabs.resumen import render_resumen_tab
