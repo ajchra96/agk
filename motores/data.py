@@ -1,7 +1,8 @@
 import streamlit as st
 import pandas as pd
 from types import SimpleNamespace
-
+from types import SimpleNamespace
+import plotly.express as px
 
 def motores_base(uploaded_file):
 
@@ -138,51 +139,7 @@ def motores_base(uploaded_file):
 
     df_completo = pd.concat([df, df_historico], ignore_index=True)
 
-    #---------Parametros agrupados-------------#
-
-    params = [
-        ("CIL1", config.col_cil_1, config.cil_min, config.cil_max, "Datos operativos / físicos de la muestra"),
-        ("CIL2", config.col_cil_2, config.cil_min, config.cil_max, "Datos operativos / físicos de la muestra"),
-        ("CIL3", config.col_cil_3, config.cil_min, config.cil_max, "Datos operativos / físicos de la muestra"),
-        ("CIL4", config.col_cil_4, config.cil_min, config.cil_max, "Datos operativos / físicos de la muestra"),
-        ("Presión Carter", config.col_p_carter, None, config.p_carter_max, "Datos operativos / físicos de la muestra"),
-        ("▲ Temperatura Radiador", config.col_temp_radiador, config.temp_rad_min, None, "Datos operativos / físicos de la muestra"),
-        ("Viscosidad", config.col_viscosidad, config.visc_min, config.visc_max, "Condición del aceite"),
-        ("Fe (Hierro)", config.col_fe, None, config.fe_max, "Elementos de desgaste (wear metals)"),
-        ("Cr (Cromo)", config.col_cr, None, config.cr_max, "Elementos de desgaste (wear metals)"),
-        ("Pb (Plomo)", config.col_pb, None, config.pb_max, "Elementos de desgaste (wear metals)"),
-        ("Cu (Cobre)", config.col_cu, None, config.cu_max, "Elementos de desgaste (wear metals)"),
-        ("Sn (Estaño)", config.col_sn, None, config.sn_max, "Elementos de desgaste (wear metals)"),
-        ("Al (Aluminio)", config.col_al, None, config.al_max, "Elementos de desgaste (wear metals)"),
-        ("Ni (Níquel)", config.col_ni, None, config.ni_max, "Elementos de desgaste (wear metals)"),
-        ("Ag (Plata)", config.col_ag, None, config.ag_max, "Elementos de desgaste (wear metals)"),
-        ("Silicio", config.col_silicio, None, config.silicio_max, "Contaminación (o elementos/propiedades contaminantes)"),
-        ("B (Boro)", config.col_b, None, config.b_max, "Contaminación (o elementos/propiedades contaminantes)"),
-        ("Na (Sodio)", config.col_na, None, config.na_max, "Contaminación (o elementos/propiedades contaminantes)"),
-        ("Mg (Magnesio)", config.col_mg, config.mg_min, None, "Elementos aditivos"),
-        ("Ca (Calcio)", config.col_ca, config.ca_min, None, "Elementos aditivos"),
-        ("Ba (Bario)", config.col_ba, None, config.ba_max, "Elementos aditivos"),
-        ("P (Fósforo)", config.col_p, config.p_min, None, "Elementos aditivos"),
-        ("Zn (Zinc)", config.col_zn, config.zn_min, None, "Elementos aditivos"),
-        ("Mo (Molibdeno)", config.col_mo, None, config.mo_max, "Elementos aditivos"),
-        ("Ti (Titanio)", config.col_ti, None, config.ti_max, "Elementos de desgaste (wear metals)"),
-        ("V (Vanadio)", config.col_v, None, config.v_max, "Elementos de desgaste (wear metals)"),
-        ("Mn (Manganeso)", config.col_mn, None, config.mn_max, "Elementos de desgaste (wear metals)"),
-        ("Cd (Cadmio)", config.col_cd, None, config.cd_max, "Elementos de desgaste (wear metals)"),
-        ("K (Potasio)", config.col_k, None, config.k_max, "Contaminación (o elementos/propiedades contaminantes)"),
-        ("Diesel (%)", config.col_diesel, None, config.diesel_max, "Contaminación (o elementos/propiedades contaminantes)"),
-        ("Agua (%)", config.col_agua, None, config.agua_max, "Contaminación (o elementos/propiedades contaminantes)"),
-        ("Oxidación", config.col_oxidacion, None, config.oxidacion_max, "Condición del aceite"),
-        ("Sulfatación", config.col_sulfatacion, None, config.sulfatacion_max, "Condición del aceite"),
-        ("Nitración", config.col_nitratacion, None, config.nitratacion_max, "Condición del aceite"),
-        ("Hollín (%)", config.col_hollin, None, config.hollin_max, "Condición del aceite"),
-        ("TBN", config.col_tbn, config.tbn_min, None, "Condición del aceite"),
-        ("PQ", config.col_pq, None, config.pq_max, "Condición del aceite"),
-    ]
-
-    groups = list(dict.fromkeys(param[4] for param in params))
-
-    return df, df_historico, df_completo, config, params, groups
+    return df, df_historico, df_completo, config
 
 def acciones_base(uploaded_rules_file):
 
@@ -196,23 +153,18 @@ def acciones_base(uploaded_rules_file):
 
 @st.cache_data(ttl=3600)
 def detect_anomalies(row, params):
-    """
-    Detects all anomalies in a single row using the params configuration.
-    
-    Args:
-        row: pandas Series (one equipment measurement at a specific time)
-        params: list of tuples like [(name, column, min_val, max_val, group), ...]
-    
-    Returns:
-        List of anomaly dicts (empty if no violations)
-    """
     anomalies = []
-    
-    for name, col, min_val, max_val, group in params:
+    for p in params:
+        name = p["name"]
+        col = p["col"]
+        min_val = p["min_val"]
+        max_val = p["max_val"]
+        group = p["group"]
+        
         value = row.get(col)
         if pd.isna(value):
             continue
-            
+        
         tipo = None
         limite = None
         mensaje = None
@@ -226,13 +178,11 @@ def detect_anomalies(row, params):
                 tipo = "ALTA"
                 limite = max_val
                 mensaje = f"por encima del máximo ({max_val:.2f})"
-                
         elif min_val is not None:
             if value < min_val:
                 tipo = "BAJA"
                 limite = min_val
                 mensaje = f"por debajo del mínimo ({min_val:.2f})"
-                
         elif max_val is not None:
             if value > max_val:
                 tipo = "ALTA"
@@ -241,7 +191,6 @@ def detect_anomalies(row, params):
         
         if tipo is not None:
             full_mensaje = f"{name}: {value:.2f} → {tipo.lower()} {mensaje}"
-            
             anomalies.append({
                 "name": name,
                 "column": col,
@@ -251,7 +200,6 @@ def detect_anomalies(row, params):
                 "mensaje": full_mensaje,
                 "grupo": group
             })
-    
     return anomalies
 
 @st.cache_data(ttl=3600)
@@ -272,49 +220,45 @@ def get_latest_anomalies(df, config, params):
 
 @st.cache_data(ttl=3600)
 def enrich_anomalies_with_severity(anomalies, df_acciones):
-    """
-    Enriches each anomaly with 'severidad' and 'priority' keys.
-    Returns list of enriched dicts.
-    """
-    # Mapping lives here → function becomes self-contained
-    severity_priority = {
-        "Crítico":    3,
-        "Precaución": 2,
-        "Atención":   1,
-        # you can add more levels later without changing other code
-    }
-
     enriched = []
+    # Mapeo usando SEVERITY (sin hardcode)
+    name_to_priority = {info["name"]: info["priority"] for info in SEVERITY.values()}
+    
     for anomaly in anomalies:
         match = df_acciones[
             (df_acciones["Indicador"] == anomaly["column"]) &
             (df_acciones["Tipo"].str.upper() == anomaly["tipo"])
         ]
         severidad = (
-            match.iloc[0].get("Severidad Típica", "No disponible")
+            match.iloc[0].get("Severidad Típica", "Sano")
             if not match.empty
-            else "No disponible"
+            else "Sano"
         )
-
-        priority = severity_priority.get(severidad, 0)
-
+        priority = name_to_priority.get(severidad, 0)
+        
         enriched_anomaly = anomaly.copy()
         enriched_anomaly["severidad"] = severidad
         enriched_anomaly["priority"] = priority
-        enriched.append(enriched_anomaly)
 
+        # ← NUEVO: identificador para gráficos
+        tipo_display = anomaly["tipo"].capitalize()  # Alta o Baja
+        enriched_anomaly["display_indicator"] = f"{anomaly['name']} ({tipo_display})"
+
+        enriched.append(enriched_anomaly)
+    
     return enriched
 
 @st.cache_data(ttl=3600)
 def get_worst_severity(anomalies, df_acciones):
     if not anomalies:
         return 0
-
+    
     enriched = enrich_anomalies_with_severity(anomalies, df_acciones)
+    
     if not enriched:
         return 0
-
-    # Now we can just take max priority (already calculated)
+    
+    # Devuelve el priority más alto (el peor)
     return max(a["priority"] for a in enriched)
 
 def compute_row_metrics(row, params, df_acc):
@@ -323,3 +267,152 @@ def compute_row_metrics(row, params, df_acc):
     max_priority = max((a["priority"] for a in enriched), default=0)
     anomaly_count = len(enriched)
     return max_priority, anomaly_count, enriched
+
+# --- Función reutilizable para todos los gráficos ---
+def create_indicator_chart(
+    df,
+    y_col,
+    title,
+    min_fixed=None,
+    max_fixed=None,
+    use_data_min=False,
+    use_data_max=False,
+):
+    fig = px.line(
+        df,
+        x=config.col_horometro,
+        y=y_col,
+        color=config.col_equipos,
+        title=title,
+        markers=True,
+        color_discrete_sequence=["blue"],
+    )
+
+    fig.update_traces(
+        selector=dict(name="Histórico"),
+        line=dict(dash="dot", color="lightblue"),
+        opacity=0.8,
+    )
+
+    y_data = df[y_col].dropna()
+    green_y0 = y_data.min() if use_data_min else min_fixed
+    green_y1 = y_data.max() if use_data_max else max_fixed
+
+    if green_y0 is not None and green_y1 is not None and green_y0 < green_y1:
+        fig.add_hrect(y0=green_y0, y1=green_y1, fillcolor="green", opacity=0.1, line_width=0)
+
+    if min_fixed is not None:
+        fig.add_hline(y=min_fixed, line_dash="dash", line_color="red")
+    if max_fixed is not None:
+        fig.add_hline(y=max_fixed, line_dash="dash", line_color="red")
+
+    fig.update_layout(hovermode="x unified")
+    return fig
+
+def style_row(row, params, highlight_color="#fff8e1"):
+    styles = [''] * len(row)
+    anomalies = detect_anomalies(row, PARAMS)
+    for anomaly in anomalies:
+        col_idx = row.index.get_loc(anomaly["column"])
+        styles[col_idx] = f'background-color: {highlight_color}'
+    return styles
+
+# TODO: Parámetros
+
+# ----------------------------
+#    Niveles de criticidad
+# ----------------------------
+
+SEVERITY = {
+    0: {"priority": 0, "name": "Sano",       "label": "Sano",       "color": "green",  "emoji": "🟢"},
+    1: {"priority": 1, "name": "Atención",   "label": "Atención",   "color": "yellow", "emoji": "🟡"},
+    2: {"priority": 2, "name": "Precaución", "label": "Precaución", "color": "orange", "emoji": "🟠"},
+    3: {"priority": 3, "name": "Crítico",    "label": "Crítico",    "color": "red",    "emoji": "🔴"},
+}
+
+SEVERITY_PRIORITY_ORDER_DESC = [3, 2, 1, 0]
+SEVERITY_PRIORITY_ORDER_ASC  = [0, 1, 2, 3]
+
+# ----------------------------
+#    Cargar Base de Datos
+# ----------------------------
+
+df, df_historico, df_completo, config = motores_base()
+
+df_acciones = acciones_base()
+
+# ----------------------------
+#    Parametros base motores
+# ----------------------------
+
+PARAMS = [
+    {"name": "CIL1", "col": config.col_cil_1, "min_val": config.cil_min, "max_val": config.cil_max, "group": "Datos operativos / físicos de la muestra"},
+    {"name": "CIL2", "col": config.col_cil_2, "min_val": config.cil_min, "max_val": config.cil_max, "group": "Datos operativos / físicos de la muestra"},
+    {"name": "CIL3", "col": config.col_cil_3, "min_val": config.cil_min, "max_val": config.cil_max, "group": "Datos operativos / físicos de la muestra"},
+    {"name": "CIL4", "col": config.col_cil_4, "min_val": config.cil_min, "max_val": config.cil_max, "group": "Datos operativos / físicos de la muestra"},
+    {"name": "Presión Carter", "col": config.col_p_carter, "min_val": None, "max_val": config.p_carter_max, "group": "Datos operativos / físicos de la muestra"},
+    {"name": "▲ Temperatura Radiador", "col": config.col_temp_radiador, "min_val": config.temp_rad_min, "max_val": None, "group": "Datos operativos / físicos de la muestra"},
+    {"name": "Viscosidad", "col": config.col_viscosidad, "min_val": config.visc_min, "max_val": config.visc_max, "group": "Condición del aceite"},
+    {"name": "Fe (Hierro)", "col": config.col_fe, "min_val": None, "max_val": config.fe_max, "group": "Elementos de desgaste (wear metals)"},
+    {"name": "Cr (Cromo)", "col": config.col_cr, "min_val": None, "max_val": config.cr_max, "group": "Elementos de desgaste (wear metals)"},
+    {"name": "Pb (Plomo)", "col": config.col_pb, "min_val": None, "max_val": config.pb_max, "group": "Elementos de desgaste (wear metals)"},
+    {"name": "Cu (Cobre)", "col": config.col_cu, "min_val": None, "max_val": config.cu_max, "group": "Elementos de desgaste (wear metals)"},
+    {"name": "Sn (Estaño)", "col": config.col_sn, "min_val": None, "max_val": config.sn_max, "group": "Elementos de desgaste (wear metals)"},
+    {"name": "Al (Aluminio)", "col": config.col_al, "min_val": None, "max_val": config.al_max, "group": "Elementos de desgaste (wear metals)"},
+    {"name": "Ni (Níquel)", "col": config.col_ni, "min_val": None, "max_val": config.ni_max, "group": "Elementos de desgaste (wear metals)"},
+    {"name": "Ag (Plata)", "col": config.col_ag, "min_val": None, "max_val": config.ag_max, "group": "Elementos de desgaste (wear metals)"},
+    {"name": "Silicio", "col": config.col_silicio, "min_val": None, "max_val": config.silicio_max, "group": "Contaminación (o elementos/propiedades contaminantes)"},
+    {"name": "B (Boro)", "col": config.col_b, "min_val": None, "max_val": config.b_max, "group": "Contaminación (o elementos/propiedades contaminantes)"},
+    {"name": "Na (Sodio)", "col": config.col_na, "min_val": None, "max_val": config.na_max, "group": "Contaminación (o elementos/propiedades contaminantes)"},
+    {"name": "Mg (Magnesio)", "col": config.col_mg, "min_val": config.mg_min, "max_val": None, "group": "Elementos aditivos"},
+    {"name": "Ca (Calcio)", "col": config.col_ca, "min_val": config.ca_min, "max_val": None, "group": "Elementos aditivos"},
+    {"name": "Ba (Bario)", "col": config.col_ba, "min_val": None, "max_val": config.ba_max, "group": "Elementos aditivos"},
+    {"name": "P (Fósforo)", "col": config.col_p, "min_val": config.p_min, "max_val": None, "group": "Elementos aditivos"},
+    {"name": "Zn (Zinc)", "col": config.col_zn, "min_val": config.zn_min, "max_val": None, "group": "Elementos aditivos"},
+    {"name": "Mo (Molibdeno)", "col": config.col_mo, "min_val": None, "max_val": config.mo_max, "group": "Elementos aditivos"},
+    {"name": "Ti (Titanio)", "col": config.col_ti, "min_val": None, "max_val": config.ti_max, "group": "Elementos de desgaste (wear metals)"},
+    {"name": "V (Vanadio)", "col": config.col_v, "min_val": None, "max_val": config.v_max, "group": "Elementos de desgaste (wear metals)"},
+    {"name": "Mn (Manganeso)", "col": config.col_mn, "min_val": None, "max_val": config.mn_max, "group": "Elementos de desgaste (wear metals)"},
+    {"name": "Cd (Cadmio)", "col": config.col_cd, "min_val": None, "max_val": config.cd_max, "group": "Elementos de desgaste (wear metals)"},
+    {"name": "K (Potasio)", "col": config.col_k, "min_val": None, "max_val": config.k_max, "group": "Contaminación (o elementos/propiedades contaminantes)"},
+    {"name": "Diesel (%)", "col": config.col_diesel, "min_val": None, "max_val": config.diesel_max, "group": "Contaminación (o elementos/propiedades contaminantes)"},
+    {"name": "Agua (%)", "col": config.col_agua, "min_val": None, "max_val": config.agua_max, "group": "Contaminación (o elementos/propiedades contaminantes)"},
+    {"name": "Oxidación", "col": config.col_oxidacion, "min_val": None, "max_val": config.oxidacion_max, "group": "Condición del aceite"},
+    {"name": "Sulfatación", "col": config.col_sulfatacion, "min_val": None, "max_val": config.sulfatacion_max, "group": "Condición del aceite"},
+    {"name": "Nitración", "col": config.col_nitratacion, "min_val": None, "max_val": config.nitratacion_max, "group": "Condición del aceite"},
+    {"name": "Hollín (%)", "col": config.col_hollin, "min_val": None, "max_val": config.hollin_max, "group": "Condición del aceite"},
+    {"name": "TBN", "col": config.col_tbn, "min_val": config.tbn_min, "max_val": None, "group": "Condición del aceite"},
+    {"name": "PQ", "col": config.col_pq, "min_val": None, "max_val": config.pq_max, "group": "Condición del aceite"},
+]
+
+PARAM_GROUPS = list(dict.fromkeys(p["group"] for p in PARAMS))
+
+
+# ----------------------------
+#    Última toma
+# ----------------------------
+
+## Tomar la última toma
+
+latest_df = (
+        df.sort_values(config.col_horometro, ascending=False)
+        .groupby(config.col_equipos)
+        .head(1)
+        .sort_values(config.col_equipos)          
+        .reset_index(drop=True) #Quitar el indice original de la tabla
+    )
+
+## Agregando la criticadad a cada equipo de la última toma
+
+metrics_list = latest_df.apply(
+    lambda row: compute_row_metrics(row, PARAMS, df_acciones),
+    axis=1
+)
+
+latest_df["max_priority"] = [m[0] for m in metrics_list]
+latest_df["anomaly_count"] = [m[1] for m in metrics_list]
+latest_df["enriched_anomalies"] = [m[2] for m in metrics_list]
+
+## Últimas anomalías
+
+latest_anomalies = get_latest_anomalies(df, config, PARAMS)
