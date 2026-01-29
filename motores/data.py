@@ -3,17 +3,24 @@ import pandas as pd
 from types import SimpleNamespace
 import plotly.express as px
 
+# ------------------- Globals (inicialmente None) -------------------
+df = None
+df_historico = None
+df_completo = None
+config = None
+df_acciones = None
+PARAMS = None
+PARAM_GROUPS = None
+latest_df = None
+latest_anomalies = None
+
+# ------------------- Carga de datos base -------------------
 def motores_base(uploaded_file):
-
     if uploaded_file is None:
-        return None, None, None, None, None, None  # or raise error / show message in caller
-
-    #---------Constantes-------------#
-
+        return None, None, None, None
+    
     config = SimpleNamespace(
-
-        ## Columnas
-
+        # Columnas
         col_equipos = "Equipo",
         col_fecha = "Fecha",
         col_horometro = "Horometro",
@@ -50,106 +57,79 @@ def motores_base(uploaded_file):
         col_agua = "Agua",
         col_oxidacion = "Oxidación",
         col_sulfatacion = "Sulfatación",
-        col_nitratacion= "Nitracion",
+        col_nitratacion = "Nitracion",
         col_hollin = "Hollin",
         col_tbn = "TBN",
         col_pq = "PQ",
-
-        ## Limites
-
+        # Límites
         cil_min = 16,
         cil_max = 35,
-        p_carter_max = 30, 
-        temp_rad_min=7,
-        visc_min=13,
-        visc_max=17,
-        fe_max=70,
+        p_carter_max = 30,
+        temp_rad_min = 7,
+        visc_min = 13,
+        visc_max = 17,
+        fe_max = 70,
         cr_max = 10,
         pb_max = 20,
-        cu_max = 25, #rev
-        sn_max = 10, #rev
+        cu_max = 25,
+        sn_max = 10,
         al_max = 10,
-        ni_max = 5, #rev
-        ag_max = 2, #rev
-        silicio_max = 15, #rev
-        b_max = 50, #rev
-        na_max = 30, #rev
-        mg_min = 10, #rev
-        ca_min = 2200, #rev
-        ba_max = 2, #rev
-        p_min = 800, #rev
-        zn_min = 700, #rev
-        mo_max = 100, #rev
-        ti_max = 2, #rev
-        v_max = 1, #rev
-        mn_max = 5, #rev
-        cd_max = 1, #rev
-        k_max = 5,#rev
-        diesel_max = 3, #rev
-        agua_max = 0.2, #rev
+        ni_max = 5,
+        ag_max = 2,
+        silicio_max = 15,
+        b_max = 50,
+        na_max = 30,
+        mg_min = 10,
+        ca_min = 2200,
+        ba_max = 2,
+        p_min = 800,
+        zn_min = 700,
+        mo_max = 100,
+        ti_max = 2,
+        v_max = 1,
+        mn_max = 5,
+        cd_max = 1,
+        k_max = 5,
+        diesel_max = 3,
+        agua_max = 0.2,
         oxidacion_max = 20,
         sulfatacion_max = 20,
-        nitratacion_max = 20,#rev
+        nitratacion_max = 20,
         hollin_max = 1.8,
-        tbn_min = 5, #rev
-        pq_max = 50, #rev
-        
+        tbn_min = 5,
+        pq_max = 50,
     )
 
-    #---------Data Original-------------#
-
-    ## Lectura
-    
     df = pd.read_excel(uploaded_file, sheet_name="DATOS")
-
-    #---------Data Promedios-------------#
-
-    ## Variables
 
     variables = [
         value for key, value in vars(config).items()
         if key.startswith('col_') and key not in ['col_equipos', 'col_horometro', 'col_fecha']
     ]
 
-    ## df_historico
-
     df_historico = (
         df.groupby(config.col_horometro, as_index=False)[variables]
-        .agg(['mean', 'count'])  # promedio + cantidad de mediciones en esa hora exacta
+        .agg(['mean', 'count'])
         .round(2)
     )
-
-    ## Flatten multiindex columns
-    df_historico.columns = [
-        f"{col[0]}_{col[1]}" if col[1] else col[0]
-        for col in df_historico.columns
-    ]
-
-   # Renombramos automáticamente todas las columnas _mean para que coincidan con el nombre original
-
+    df_historico.columns = [f"{col[0]}_{col[1]}" if col[1] else col[0] for col in df_historico.columns]
     rename_dict = {f"{var}_mean": var for var in variables}
-    
     df_historico = df_historico.rename(columns=rename_dict)
-
     df_historico = df_historico.sort_values(config.col_horometro)
     df_historico[config.col_equipos] = "Histórico"
-
-    #---------Tabla unida historico + promedios-------------#
 
     df_completo = pd.concat([df, df_historico], ignore_index=True)
 
     return df, df_historico, df_completo, config
 
+
 def acciones_base(uploaded_rules_file):
-
     if uploaded_rules_file is None:
-        return None   # only one return value
-        
-    df_acc = pd.read_excel(uploaded_rules_file, sheet_name="REGLAS")
-    return df_acc
+        return None
+    return pd.read_excel(uploaded_rules_file, sheet_name="REGLAS")
 
-#-------------------Helpers-------------------------------#
 
+# ------------------- Helpers -------------------
 @st.cache_data(ttl=3600)
 def detect_anomalies(row, params):
     anomalies = []
@@ -159,15 +139,14 @@ def detect_anomalies(row, params):
         min_val = p["min_val"]
         max_val = p["max_val"]
         group = p["group"]
-        
         value = row.get(col)
         if pd.isna(value):
             continue
-        
+
         tipo = None
         limite = None
         mensaje = None
-        
+
         if min_val is not None and max_val is not None:
             if value < min_val:
                 tipo = "BAJA"
@@ -177,17 +156,15 @@ def detect_anomalies(row, params):
                 tipo = "ALTA"
                 limite = max_val
                 mensaje = f"por encima del máximo ({max_val:.2f})"
-        elif min_val is not None:
-            if value < min_val:
-                tipo = "BAJA"
-                limite = min_val
-                mensaje = f"por debajo del mínimo ({min_val:.2f})"
-        elif max_val is not None:
-            if value > max_val:
-                tipo = "ALTA"
-                limite = max_val
-                mensaje = f"por encima del máximo ({max_val:.2f})"
-        
+        elif min_val is not None and value < min_val:
+            tipo = "BAJA"
+            limite = min_val
+            mensaje = f"por debajo del mínimo ({min_val:.2f})"
+        elif max_val is not None and value > max_val:
+            tipo = "ALTA"
+            limite = max_val
+            mensaje = f"por encima del máximo ({max_val:.2f})"
+
         if tipo is not None:
             full_mensaje = f"{name}: {value:.2f} → {tipo.lower()} {mensaje}"
             anomalies.append({
@@ -201,14 +178,11 @@ def detect_anomalies(row, params):
             })
     return anomalies
 
+
 @st.cache_data(ttl=3600)
 def get_latest_anomalies(df, config, params):
-    """
-    Returns {equipo: [anomalies]} only for equipments that have at least one anomaly
-    """
     latest_idx = df.groupby(config.col_equipos)[config.col_horometro].idxmax()
     latest_df = df.loc[latest_idx]
-    
     result = {}
     for _, row in latest_df.iterrows():
         equipo = row[config.col_equipos]
@@ -217,48 +191,36 @@ def get_latest_anomalies(df, config, params):
             result[equipo] = anomalies
     return result
 
+
 @st.cache_data(ttl=3600)
 def enrich_anomalies_with_severity(anomalies, df_acciones):
     enriched = []
-    # Mapeo usando SEVERITY (sin hardcode)
     name_to_priority = {info["name"]: info["priority"] for info in SEVERITY.values()}
-    
+
     for anomaly in anomalies:
         match = df_acciones[
             (df_acciones["Indicador"] == anomaly["column"]) &
             (df_acciones["Tipo"].str.upper() == anomaly["tipo"])
         ]
-        severidad = (
-            match.iloc[0].get("Severidad Típica", "Sano")
-            if not match.empty
-            else "Sano"
-        )
+        severidad = match.iloc[0].get("Severidad Típica", "Sano") if not match.empty else "Sano"
         priority = name_to_priority.get(severidad, 0)
-        
+
         enriched_anomaly = anomaly.copy()
         enriched_anomaly["severidad"] = severidad
         enriched_anomaly["priority"] = priority
-
-        # ← NUEVO: identificador para gráficos
-        tipo_display = anomaly["tipo"].capitalize()  # Alta o Baja
-        enriched_anomaly["display_indicator"] = f"{anomaly['name']} ({tipo_display})"
-
+        enriched_anomaly["display_indicator"] = f"{anomaly['name']} ({anomaly['tipo'].capitalize()})"
         enriched.append(enriched_anomaly)
-    
+
     return enriched
+
 
 @st.cache_data(ttl=3600)
 def get_worst_severity(anomalies, df_acciones):
     if not anomalies:
         return 0
-    
     enriched = enrich_anomalies_with_severity(anomalies, df_acciones)
-    
-    if not enriched:
-        return 0
-    
-    # Devuelve el priority más alto (el peor)
-    return max(a["priority"] for a in enriched)
+    return max(a["priority"] for a in enriched) if enriched else 0
+
 
 def compute_row_metrics(row, params, df_acc):
     anomalies = detect_anomalies(row, params)
@@ -267,16 +229,8 @@ def compute_row_metrics(row, params, df_acc):
     anomaly_count = len(enriched)
     return max_priority, anomaly_count, enriched
 
-# --- Función reutilizable para todos los gráficos ---
-def create_indicator_chart(
-    df,
-    y_col,
-    title,
-    min_fixed=None,
-    max_fixed=None,
-    use_data_min=False,
-    use_data_max=False,
-):
+
+def create_indicator_chart(df, y_col, title, min_fixed=None, max_fixed=None, use_data_min=False, use_data_max=False):
     fig = px.line(
         df,
         x=config.col_horometro,
@@ -286,17 +240,11 @@ def create_indicator_chart(
         markers=True,
         color_discrete_sequence=["blue"],
     )
-
-    fig.update_traces(
-        selector=dict(name="Histórico"),
-        line=dict(dash="dot", color="lightblue"),
-        opacity=0.8,
-    )
+    fig.update_traces(selector=dict(name="Histórico"), line=dict(dash="dot", color="lightblue"), opacity=0.8)
 
     y_data = df[y_col].dropna()
     green_y0 = y_data.min() if use_data_min else min_fixed
     green_y1 = y_data.max() if use_data_max else max_fixed
-
     if green_y0 is not None and green_y1 is not None and green_y0 < green_y1:
         fig.add_hrect(y0=green_y0, y1=green_y1, fillcolor="green", opacity=0.1, line_width=0)
 
@@ -308,51 +256,38 @@ def create_indicator_chart(
     fig.update_layout(hovermode="x unified")
     return fig
 
+
 def style_row(row, params, highlight_color="#fff8e1"):
     styles = [''] * len(row)
-    anomalies = detect_anomalies(row, PARAMS)
+    anomalies = detect_anomalies(row, params)  # ← Ahora usa el parámetro params
     for anomaly in anomalies:
         col_idx = row.index.get_loc(anomaly["column"])
         styles[col_idx] = f'background-color: {highlight_color}'
     return styles
 
-# TODO: Parámetros
 
-# ----------------------------
-#    Niveles de criticidad
-# ----------------------------
-
+# ------------------- Severidad -------------------
 SEVERITY = {
-    0: {"priority": 0, "name": "Sano",       "label": "Sano",       "color": "green",  "emoji": "🟢"},
-    1: {"priority": 1, "name": "Atención",   "label": "Atención",   "color": "yellow", "emoji": "🟡"},
+    0: {"priority": 0, "name": "Sano", "label": "Sano", "color": "green", "emoji": "🟢"},
+    1: {"priority": 1, "name": "Atención", "label": "Atención", "color": "yellow", "emoji": "🟡"},
     2: {"priority": 2, "name": "Precaución", "label": "Precaución", "color": "orange", "emoji": "🟠"},
-    3: {"priority": 3, "name": "Crítico",    "label": "Crítico",    "color": "red",    "emoji": "🔴"},
+    3: {"priority": 3, "name": "Crítico", "label": "Crítico", "color": "red", "emoji": "🔴"},
 }
 
-SEVERITY_PRIORITY_ORDER_DESC = [3, 2, 1, 0]
-SEVERITY_PRIORITY_ORDER_ASC  = [0, 1, 2, 3]
 
-# ----------------------------
-#    Cargar Base de Datos
-# ----------------------------
-
-df = None
-df_historico = None
-df_completo = None
-config = None
-df_acciones = None
-PARAMS = None
-
+# ------------------- Función de carga principal -------------------
 def load_data(uploaded_motores, uploaded_reglas):
-    global df, df_historico, df_completo, config, df_acciones, PARAMS, PARAM_GROUPS  # Agrega PARAMS aquí
-    
+    global df, df_historico, df_completo, config, df_acciones
+    global PARAMS, PARAM_GROUPS, latest_df, latest_anomalies
+
     if uploaded_motores is None or uploaded_reglas is None:
-        return  # o st.warning si quieres, pero desde aquí no puedes
-    
+        return
+
+    # Carga básica
     df, df_historico, df_completo, config = motores_base(uploaded_motores)
     df_acciones = acciones_base(uploaded_reglas)
-    
-    # ← AQUÍ construyes PARAMS, ahora que config existe
+
+    # Construcción de PARAMS
     PARAMS = [
         {"name": "CIL1", "col": config.col_cil_1, "min_val": config.cil_min, "max_val": config.cil_max, "group": "Datos operativos / físicos de la muestra"},
         {"name": "CIL2", "col": config.col_cil_2, "min_val": config.cil_min, "max_val": config.cil_max, "group": "Datos operativos / físicos de la muestra"},
@@ -392,35 +327,29 @@ def load_data(uploaded_motores, uploaded_reglas):
         {"name": "TBN", "col": config.col_tbn, "min_val": config.tbn_min, "max_val": None, "group": "Aditivos"},
         {"name": "PQ", "col": config.col_pq, "min_val": None, "max_val": config.pq_max, "group": "Desgaste"},
     ]
-    
+
     PARAM_GROUPS = list(dict.fromkeys(p["group"] for p in PARAMS))
 
-
-# ----------------------------
-#    Última toma
-# ----------------------------
-
-## Tomar la última toma
-
-latest_df = (
+    # Última toma por equipo + métricas
+    latest_df = (
         df.sort_values(config.col_horometro, ascending=False)
         .groupby(config.col_equipos)
         .head(1)
-        .sort_values(config.col_equipos)          
-        .reset_index(drop=True) #Quitar el indice original de la tabla
+        .sort_values(config.col_equipos)
+        .reset_index(drop=True)
     )
 
-## Agregando la criticadad a cada equipo de la última toma
+    metrics_list = latest_df.apply(
+        lambda row: compute_row_metrics(row, PARAMS, df_acciones),
+        axis=1
+    )
+    latest_df["max_priority"] = [m[0] for m in metrics_list]
+    latest_df["anomaly_count"] = [m[1] for m in metrics_list]
+    latest_df["enriched_anomalies"] = [m[2] for m in metrics_list]
 
-metrics_list = latest_df.apply(
-    lambda row: compute_row_metrics(row, PARAMS, df_acciones),
-    axis=1
-)
+    # Anomalías de la última toma
+    latest_anomalies = get_latest_anomalies(df, config, PARAMS)
 
-latest_df["max_priority"] = [m[0] for m in metrics_list]
-latest_df["anomaly_count"] = [m[1] for m in metrics_list]
-latest_df["enriched_anomalies"] = [m[2] for m in metrics_list]
-
-## Últimas anomalías
-
-latest_anomalies = get_latest_anomalies(df, config, PARAMS)
+    # Asignar a globals
+    globals()['latest_df'] = latest_df
+    globals()['latest_anomalies'] = latest_anomalies
