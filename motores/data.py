@@ -4,6 +4,7 @@ from types import SimpleNamespace
 from types import SimpleNamespace
 import plotly.express as px
 
+
 from app_motores import uploaded_motores, uploaded_reglas
 
 def motores_base(uploaded_file):
