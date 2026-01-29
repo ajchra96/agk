@@ -273,7 +273,8 @@ SEVERITY = {
     2: {"priority": 2, "name": "Precaución", "label": "Precaución", "color": "orange", "emoji": "🟠"},
     3: {"priority": 3, "name": "Crítico", "label": "Crítico", "color": "red", "emoji": "🔴"},
 }
-
+SEVERITY_PRIORITY_ORDER_DESC = [3, 2, 1, 0]
+SEVERITY_PRIORITY_ORDER_ASC = [0, 1, 2, 3]
 
 # ------------------- Función de carga principal -------------------
 def load_data(uploaded_motores, uploaded_reglas):
