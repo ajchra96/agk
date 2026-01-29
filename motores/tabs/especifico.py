@@ -14,6 +14,19 @@ def render_especifico_tab():
 
     st.header("Análisis de Condición Motores Diesel por Equipo")
 
+    
+    #VARIABLES
+    
+    config = data.config
+    df = data.df.copy()
+    df_historico = data.df_historico.copy()
+    df_completo = data.df_completo.copy()
+    df_acciones = data.df_acciones.copy()
+    latest_df = data.latest_df.copy()
+    latest_anomalies = data.latest_anomalies
+    PARAMS = data.PARAMS 
+    PARAM_GROUPS = data.PARAM_GROUPS
+
     # TODO: Filtro
 
     ## Prepare equipment list with severity-based emoji + sorting
