@@ -8,7 +8,21 @@ import networkx as nx
 import scipy
 from data import enrich_anomalies_with_severity, detect_anomalies, compute_row_metrics
 from data import SEVERITY, SEVERITY_PRIORITY_ORDER_ASC, PARAMS, PARAM_GROUPS
-from data import df, df_historico, config, df_acciones, latest_df
+
+import data
+
+
+#VARIABLES
+    
+config = data.config
+df = data.df.copy()
+df_historico = data.df_historico.copy()
+df_completo = data.df_completo.copy()
+df_acciones = data.df_acciones.copy()
+latest_df = data.latest_df.copy()
+latest_anomalies = data.latest_anomalies
+PARAMS = data.PARAMS 
+PARAM_GROUPS = data.PARAM_GROUPS
 
 def render_analisis_tab():
     st.header("Análisis Avanzado")
