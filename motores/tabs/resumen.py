@@ -10,6 +10,13 @@ from data import SEVERITY, SEVERITY_PRIORITY_ORDER_DESC, PARAM_GROUPS
 @st.fragment
 def render_resumen_tab():
 
+    #VARIABLES
+    
+    latest_df = data.latest_df.copy()
+    config = data.config
+    latest_anomalies = data.latest_anomalies
+
+
     st.header("Resumen General de Condición - Todos los Equipos")
 
     # TODO: Vista General de la Flota
@@ -17,9 +24,6 @@ def render_resumen_tab():
     st.subheader("Vista General de la Flota")
 
     ## Total equipos activos
-
-    latest_df = data.latest_df.copy()
-    config = data.config
 
     fleet_size = len(latest_df)
 
