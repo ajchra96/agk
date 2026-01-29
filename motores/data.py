@@ -341,61 +341,59 @@ df_historico = None
 df_completo = None
 config = None
 df_acciones = None
+PARAMS = None
 
 def load_data(uploaded_motores, uploaded_reglas):
-    global df, df_historico, df_completo, config, df_acciones
+    global df, df_historico, df_completo, config, df_acciones, PARAMS, PARAM_GROUPS  # Agrega PARAMS aquí
     
     if uploaded_motores is None or uploaded_reglas is None:
-        return  # o raise error, según prefieras
+        return  # o st.warning si quieres, pero desde aquí no puedes
     
     df, df_historico, df_completo, config = motores_base(uploaded_motores)
     df_acciones = acciones_base(uploaded_reglas)
-
-# ----------------------------
-#    Parametros base motores
-# ----------------------------
-
-PARAMS = [
-    {"name": "CIL1", "col": config.col_cil_1, "min_val": config.cil_min, "max_val": config.cil_max, "group": "Datos operativos / físicos de la muestra"},
-    {"name": "CIL2", "col": config.col_cil_2, "min_val": config.cil_min, "max_val": config.cil_max, "group": "Datos operativos / físicos de la muestra"},
-    {"name": "CIL3", "col": config.col_cil_3, "min_val": config.cil_min, "max_val": config.cil_max, "group": "Datos operativos / físicos de la muestra"},
-    {"name": "CIL4", "col": config.col_cil_4, "min_val": config.cil_min, "max_val": config.cil_max, "group": "Datos operativos / físicos de la muestra"},
-    {"name": "Presión Carter", "col": config.col_p_carter, "min_val": None, "max_val": config.p_carter_max, "group": "Datos operativos / físicos de la muestra"},
-    {"name": "▲ Temperatura Radiador", "col": config.col_temp_radiador, "min_val": config.temp_rad_min, "max_val": None, "group": "Datos operativos / físicos de la muestra"},
-    {"name": "Viscosidad", "col": config.col_viscosidad, "min_val": config.visc_min, "max_val": config.visc_max, "group": "Condición del aceite"},
-    {"name": "Fe (Hierro)", "col": config.col_fe, "min_val": None, "max_val": config.fe_max, "group": "Elementos de desgaste (wear metals)"},
-    {"name": "Cr (Cromo)", "col": config.col_cr, "min_val": None, "max_val": config.cr_max, "group": "Elementos de desgaste (wear metals)"},
-    {"name": "Pb (Plomo)", "col": config.col_pb, "min_val": None, "max_val": config.pb_max, "group": "Elementos de desgaste (wear metals)"},
-    {"name": "Cu (Cobre)", "col": config.col_cu, "min_val": None, "max_val": config.cu_max, "group": "Elementos de desgaste (wear metals)"},
-    {"name": "Sn (Estaño)", "col": config.col_sn, "min_val": None, "max_val": config.sn_max, "group": "Elementos de desgaste (wear metals)"},
-    {"name": "Al (Aluminio)", "col": config.col_al, "min_val": None, "max_val": config.al_max, "group": "Elementos de desgaste (wear metals)"},
-    {"name": "Ni (Níquel)", "col": config.col_ni, "min_val": None, "max_val": config.ni_max, "group": "Elementos de desgaste (wear metals)"},
-    {"name": "Ag (Plata)", "col": config.col_ag, "min_val": None, "max_val": config.ag_max, "group": "Elementos de desgaste (wear metals)"},
-    {"name": "Silicio", "col": config.col_silicio, "min_val": None, "max_val": config.silicio_max, "group": "Contaminación (o elementos/propiedades contaminantes)"},
-    {"name": "B (Boro)", "col": config.col_b, "min_val": None, "max_val": config.b_max, "group": "Contaminación (o elementos/propiedades contaminantes)"},
-    {"name": "Na (Sodio)", "col": config.col_na, "min_val": None, "max_val": config.na_max, "group": "Contaminación (o elementos/propiedades contaminantes)"},
-    {"name": "Mg (Magnesio)", "col": config.col_mg, "min_val": config.mg_min, "max_val": None, "group": "Elementos aditivos"},
-    {"name": "Ca (Calcio)", "col": config.col_ca, "min_val": config.ca_min, "max_val": None, "group": "Elementos aditivos"},
-    {"name": "Ba (Bario)", "col": config.col_ba, "min_val": None, "max_val": config.ba_max, "group": "Elementos aditivos"},
-    {"name": "P (Fósforo)", "col": config.col_p, "min_val": config.p_min, "max_val": None, "group": "Elementos aditivos"},
-    {"name": "Zn (Zinc)", "col": config.col_zn, "min_val": config.zn_min, "max_val": None, "group": "Elementos aditivos"},
-    {"name": "Mo (Molibdeno)", "col": config.col_mo, "min_val": None, "max_val": config.mo_max, "group": "Elementos aditivos"},
-    {"name": "Ti (Titanio)", "col": config.col_ti, "min_val": None, "max_val": config.ti_max, "group": "Elementos de desgaste (wear metals)"},
-    {"name": "V (Vanadio)", "col": config.col_v, "min_val": None, "max_val": config.v_max, "group": "Elementos de desgaste (wear metals)"},
-    {"name": "Mn (Manganeso)", "col": config.col_mn, "min_val": None, "max_val": config.mn_max, "group": "Elementos de desgaste (wear metals)"},
-    {"name": "Cd (Cadmio)", "col": config.col_cd, "min_val": None, "max_val": config.cd_max, "group": "Elementos de desgaste (wear metals)"},
-    {"name": "K (Potasio)", "col": config.col_k, "min_val": None, "max_val": config.k_max, "group": "Contaminación (o elementos/propiedades contaminantes)"},
-    {"name": "Diesel (%)", "col": config.col_diesel, "min_val": None, "max_val": config.diesel_max, "group": "Contaminación (o elementos/propiedades contaminantes)"},
-    {"name": "Agua (%)", "col": config.col_agua, "min_val": None, "max_val": config.agua_max, "group": "Contaminación (o elementos/propiedades contaminantes)"},
-    {"name": "Oxidación", "col": config.col_oxidacion, "min_val": None, "max_val": config.oxidacion_max, "group": "Condición del aceite"},
-    {"name": "Sulfatación", "col": config.col_sulfatacion, "min_val": None, "max_val": config.sulfatacion_max, "group": "Condición del aceite"},
-    {"name": "Nitración", "col": config.col_nitratacion, "min_val": None, "max_val": config.nitratacion_max, "group": "Condición del aceite"},
-    {"name": "Hollín (%)", "col": config.col_hollin, "min_val": None, "max_val": config.hollin_max, "group": "Condición del aceite"},
-    {"name": "TBN", "col": config.col_tbn, "min_val": config.tbn_min, "max_val": None, "group": "Condición del aceite"},
-    {"name": "PQ", "col": config.col_pq, "min_val": None, "max_val": config.pq_max, "group": "Condición del aceite"},
-]
-
-PARAM_GROUPS = list(dict.fromkeys(p["group"] for p in PARAMS))
+    
+    # ← AQUÍ construyes PARAMS, ahora que config existe
+    PARAMS = [
+        {"name": "CIL1", "col": config.col_cil_1, "min_val": config.cil_min, "max_val": config.cil_max, "group": "Datos operativos / físicos de la muestra"},
+        {"name": "CIL2", "col": config.col_cil_2, "min_val": config.cil_min, "max_val": config.cil_max, "group": "Datos operativos / físicos de la muestra"},
+        {"name": "CIL3", "col": config.col_cil_3, "min_val": config.cil_min, "max_val": config.cil_max, "group": "Datos operativos / físicos de la muestra"},
+        {"name": "CIL4", "col": config.col_cil_4, "min_val": config.cil_min, "max_val": config.cil_max, "group": "Datos operativos / físicos de la muestra"},
+        {"name": "Blow by Carter", "col": config.col_p_carter, "min_val": None, "max_val": config.p_carter_max, "group": "Datos operativos / físicos de la muestra"},
+        {"name": "▲ Temp Radiador", "col": config.col_temp_radiador, "min_val": config.temp_rad_min, "max_val": None, "group": "Datos operativos / físicos de la muestra"},
+        {"name": "Viscosidad", "col": config.col_viscosidad, "min_val": config.visc_min, "max_val": config.visc_max, "group": "Propiedades del aceite"},
+        {"name": "Fe", "col": config.col_fe, "min_val": None, "max_val": config.fe_max, "group": "Desgaste"},
+        {"name": "Cr", "col": config.col_cr, "min_val": None, "max_val": config.cr_max, "group": "Desgaste"},
+        {"name": "Pb", "col": config.col_pb, "min_val": None, "max_val": config.pb_max, "group": "Desgaste"},
+        {"name": "Cu", "col": config.col_cu, "min_val": None, "max_val": config.cu_max, "group": "Desgaste"},
+        {"name": "Sn", "col": config.col_sn, "min_val": None, "max_val": config.sn_max, "group": "Desgaste"},
+        {"name": "Al", "col": config.col_al, "min_val": None, "max_val": config.al_max, "group": "Desgaste"},
+        {"name": "Ni", "col": config.col_ni, "min_val": None, "max_val": config.ni_max, "group": "Desgaste"},
+        {"name": "Ag", "col": config.col_ag, "min_val": None, "max_val": config.ag_max, "group": "Desgaste"},
+        {"name": "Silicio", "col": config.col_silicio, "min_val": None, "max_val": config.silicio_max, "group": "Contaminación"},
+        {"name": "B", "col": config.col_b, "min_val": None, "max_val": config.b_max, "group": "Aditivos / Contaminación"},
+        {"name": "Na", "col": config.col_na, "min_val": None, "max_val": config.na_max, "group": "Contaminación"},
+        {"name": "Mg", "col": config.col_mg, "min_val": config.mg_min, "max_val": None, "group": "Aditivos"},
+        {"name": "Ca", "col": config.col_ca, "min_val": config.ca_min, "max_val": None, "group": "Aditivos"},
+        {"name": "Ba", "col": config.col_ba, "min_val": None, "max_val": config.ba_max, "group": "Aditivos"},
+        {"name": "P", "col": config.col_p, "min_val": config.p_min, "max_val": None, "group": "Aditivos"},
+        {"name": "Zn", "col": config.col_zn, "min_val": config.zn_min, "max_val": None, "group": "Aditivos"},
+        {"name": "Mo", "col": config.col_mo, "min_val": None, "max_val": config.mo_max, "group": "Aditivos"},
+        {"name": "Ti", "col": config.col_ti, "min_val": None, "max_val": config.ti_max, "group": "Desgaste"},
+        {"name": "V", "col": config.col_v, "min_val": None, "max_val": config.v_max, "group": "Desgaste"},
+        {"name": "Mn", "col": config.col_mn, "min_val": None, "max_val": config.mn_max, "group": "Desgaste"},
+        {"name": "Cd", "col": config.col_cd, "min_val": None, "max_val": config.cd_max, "group": "Desgaste"},
+        {"name": "K", "col": config.col_k, "min_val": None, "max_val": config.k_max, "group": "Contaminación"},
+        {"name": "Diesel", "col": config.col_diesel, "min_val": None, "max_val": config.diesel_max, "group": "Contaminación"},
+        {"name": "Agua", "col": config.col_agua, "min_val": None, "max_val": config.agua_max, "group": "Contaminación"},
+        {"name": "Oxidación", "col": config.col_oxidacion, "min_val": None, "max_val": config.oxidacion_max, "group": "Degradación del aceite"},
+        {"name": "Sulfatación", "col": config.col_sulfatacion, "min_val": None, "max_val": config.sulfatacion_max, "group": "Degradación del aceite"},
+        {"name": "Nitración", "col": config.col_nitratacion, "min_val": None, "max_val": config.nitratacion_max, "group": "Degradación del aceite"},
+        {"name": "Hollín", "col": config.col_hollin, "min_val": None, "max_val": config.hollin_max, "group": "Contaminación"},
+        {"name": "TBN", "col": config.col_tbn, "min_val": config.tbn_min, "max_val": None, "group": "Aditivos"},
+        {"name": "PQ", "col": config.col_pq, "min_val": None, "max_val": config.pq_max, "group": "Desgaste"},
+    ]
+    
+    PARAM_GROUPS = list(dict.fromkeys(p["group"] for p in PARAMS))
 
 
 # ----------------------------
