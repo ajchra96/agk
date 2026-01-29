@@ -24,6 +24,10 @@ uploaded_reglas = st.sidebar.file_uploader(
     help="Debe contener la hoja 'REGLAS'"
 )
 
+if uploaded_motores is None or uploaded_reglas is None:
+    st.warning("Por favor, carga ambos archivos para continuar.")
+    st.stop()
+
 data.load_data(uploaded_motores, uploaded_reglas)
 
 # === TABS ===
