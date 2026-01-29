@@ -10,7 +10,6 @@ from data import enrich_anomalies_with_severity, detect_anomalies, compute_row_m
 from data import SEVERITY, SEVERITY_PRIORITY_ORDER_ASC, PARAMS, PARAM_GROUPS
 from data import df, df_historico, config, df_acciones, latest_df
 
-
 def render_analisis_tab():
     st.header("Análisis Avanzado")
 
