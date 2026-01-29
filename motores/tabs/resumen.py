@@ -12,10 +12,15 @@ def render_resumen_tab():
 
     #VARIABLES
     
-    latest_df = data.latest_df.copy()
     config = data.config
+    df = data.df
+    df_historico = data.df_historico  # si lo usas
+    df_completo = data.df_completo    # si lo usas
+    df_acciones = data.df_acciones
+    latest_df = data.latest_df
     latest_anomalies = data.latest_anomalies
-    df_acciones = data.df_acciones.copy()
+    PARAMS = data.PARAMS              # si lo necesitas
+    PARAM_GROUPS = data.PARAM_GROUPS  # ya lo tenías importado directo, pero ok
 
 
     st.header("Resumen General de Condición - Todos los Equipos")
