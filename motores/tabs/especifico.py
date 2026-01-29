@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import data
 
 #from ai import render_ai_chat_esp
 from data import create_indicator_chart, get_worst_severity, enrich_anomalies_with_severity, compute_row_metrics, style_row
