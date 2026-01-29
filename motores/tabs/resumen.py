@@ -19,6 +19,7 @@ def render_resumen_tab():
     ## Total equipos activos
 
     latest_df = data.latest_df.copy()
+    config = data.config
 
     fleet_size = len(latest_df)
 
