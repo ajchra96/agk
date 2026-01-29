@@ -24,6 +24,8 @@ uploaded_reglas = st.sidebar.file_uploader(
     help="Debe contener la hoja 'REGLAS'"
 )
 
+data.load_data(uploaded_motores, uploaded_reglas)
+
 # === TABS ===
 tab_resumen, tab_especifico, tab_analisis = st.tabs(["General", "Específico", "Análisis"])
 
