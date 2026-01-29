@@ -11,21 +11,20 @@ from data import SEVERITY, SEVERITY_PRIORITY_ORDER_ASC, PARAMS, PARAM_GROUPS
 
 import data
 
-
-#VARIABLES
-    
-config = data.config
-df = data.df.copy()
-df_historico = data.df_historico.copy()
-df_completo = data.df_completo.copy()
-df_acciones = data.df_acciones.copy()
-latest_df = data.latest_df.copy()
-latest_anomalies = data.latest_anomalies
-PARAMS = data.PARAMS 
-PARAM_GROUPS = data.PARAM_GROUPS
-
 def render_analisis_tab():
     st.header("Análisis Avanzado")
+
+    #VARIABLES
+    
+    config = data.config
+    df = data.df.copy()
+    df_historico = data.df_historico.copy()
+    df_completo = data.df_completo.copy()
+    df_acciones = data.df_acciones.copy()
+    latest_df = data.latest_df.copy()
+    latest_anomalies = data.latest_anomalies
+    PARAMS = data.PARAMS 
+    PARAM_GROUPS = data.PARAM_GROUPS
 
     # Cache shared computations (fast, computed once per session)
     if 'indicator_emoji' not in st.session_state:
