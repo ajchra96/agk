@@ -1,8 +1,5 @@
 import streamlit as st
-import pandas as pd
 
-from data import motores_base
-from data import acciones_base
 from tabs.especifico import render_especifico_tab
 from tabs.resumen import render_resumen_tab
 from tabs.analisis import render_analisis_tab
@@ -27,22 +24,17 @@ uploaded_reglas = st.sidebar.file_uploader(
     help="Debe contener la hoja 'REGLAS'"
 )
 
-####
-
-df, df_historico, df_completo, config, params, groups = motores_base(uploaded_motores)
-df_acciones = acciones_base(uploaded_reglas)
-
 # === TABS ===
 tab_resumen, tab_especifico, tab_analisis = st.tabs(["General", "Específico", "Análisis"])
 
 with tab_resumen:
 
-    render_resumen_tab(df, df_historico, df_completo, config, params, groups, df_acciones)
+    render_resumen_tab()
 
 with tab_especifico:
 
-    render_especifico_tab(df, df_historico, df_completo, config, params, groups, df_acciones)
+    render_especifico_tab()
 
 with tab_analisis:
 
-    render_analisis_tab(df, df_historico, df_completo, config, params, groups, df_acciones)
+    render_analisis_tab()
