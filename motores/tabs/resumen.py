@@ -18,7 +18,9 @@ def render_resumen_tab():
 
     ## Total equipos activos
 
-    fleet_size = len(data.latest_df)
+    latest_df = data.latest_df.copy()
+
+    fleet_size = len(latest_df)
 
     st.metric(label="Total equipos activos", value=fleet_size)
 
