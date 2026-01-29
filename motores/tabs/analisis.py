@@ -62,6 +62,9 @@ def render_analisis_tab():
 
 @st.fragment
 def historical_trends_fragment():
+    
+    latest_df = data.latest_df.copy()
+    
     st.subheader("📈 Tendencias históricas")
     ## Calculos internos
     fleet_size = len(latest_df)
