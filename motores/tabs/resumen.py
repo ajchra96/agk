@@ -2,9 +2,10 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 
+import data
+
 #from ai import render_ai_chat
 from data import enrich_anomalies_with_severity
-from data import df, config, df_acciones, latest_df, latest_anomalies
 from data import SEVERITY, SEVERITY_PRIORITY_ORDER_DESC, PARAM_GROUPS
 
 @st.fragment
