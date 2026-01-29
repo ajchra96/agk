@@ -15,6 +15,7 @@ def render_resumen_tab():
     latest_df = data.latest_df.copy()
     config = data.config
     latest_anomalies = data.latest_anomalies
+    df_acciones = data.df_acciones.copy()
 
 
     st.header("Resumen General de Condición - Todos los Equipos")
